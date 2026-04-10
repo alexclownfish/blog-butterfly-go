@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>后台管理</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <div class="header">
+    <h2>📝 博客管理系统</h2>
+    <button onclick="logout()">退出登录</button>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <a href="#" onclick="showPage('articles')" class="active">📄 文章管理</a>
+      <a href="#" onclick="showPage('categories')">📁 分类管理</a>
+      <a href="#" onclick="showPage('images')">🖼️ 图床管理</a>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+  
+  <!-- 编辑器弹窗 -->
+  <div id="editorModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000;">
+    <div style="background:white; width:90%; max-width:1000px; height:90%; margin:2% auto; border-radius:10px; overflow:auto; padding:30px;">
+      <h3 id="editorTitle">新建文章</h3>
+      <input type="text" id="editTitle" placeholder="标题">
+      <input type="text" id="editSummary" placeholder="摘要">
+      <input type="text" id="editCover" placeholder="封面图 URL">
+      <select id="editCategory"><option value="">选择分类</option></select>
+      <textarea id="editContent" style="height:300px;"></textarea>
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveArticle()">保存</button>
+        <button class="btn" onclick="closeEditor()">取消</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const API = 'http://172.28.74.191:30083/api';
+    const token = localStorage.getItem('token');
+    let editingId = null;
+    if (!token) location.href = '/admin/login.html';
+    
+    function showPage(page) {
+      document.querySelectorAll('.sidebar a').forEach(a => a.classList.remove('active'));
+      event.target.classList.add('active');
+      if (page === 'articles') loadArticlesPage();
+      else if (page === 'categories') loadCategoriesPage();
+      else if (page === 'images') loadImagesPage();
+    }
+    
+    function loadArticlesPage() {
+      document.getElementById('content').innerHTML = `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <h3>文章列表</h3>
+            <button class="btn btn-primary" onclick="openEditor()">+ 新建文章</button>
+          </div>
+          <div id="article-list" style="display: grid; gap: 15px;"></div>
+        </div>
+      `;
+      loadArticles();
+    }
+    
+    function loadArticles() {
+      fetch(`${API}/articles`).then(res => res.json()).then(json => {
+        const list = document.getElementById('article-list');
+        list.innerHTML = '';
+        json.data.forEach(article => {
+          const div = document.createElement('div');
+          div.style.cssText = 'border: 1px solid #e9ecef; padding: 20px; border-radius: 8px;';
+          div.innerHTML = `
+            <h4>${article.title}</h4>
+            <p style="color: #666; font-size: 14px;">${article.summary || '暂无摘要'}</p>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+              <span style="color: #999;">${new Date(article.created_at).toLocaleDateString()}</span>
+              <div>
+                <button class="btn btn-primary" onclick="openEditor(${article.id})">编辑</button>
+                <button class="btn btn-danger" onclick="deleteArticle(${article.id})">删除</button>
+              </div>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+      });
+    }
+    
+    function deleteArticle(id) {
+      if (!confirm('确定删除？')) return;
+      fetch(`${API}/articles/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(() => loadArticles());
+    }
+    
+    function openEditor(id = null) {
+      editingId = id;
+      document.getElementById('editorTitle').textContent = id ? '编辑文章' : '新建文章';
+      document.getElementById('editorModal').style.display = 'block';
+      fetch(`${API}/categories`).then(res => res.json()).then(json => {
+        const sel = document.getElementById('editCategory');
+        sel.innerHTML = '<option value="">选择分类</option>';
+        json.data.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+      });
+      if (id) {
+        fetch(`${API}/articles/${id}`).then(res => res.json()).then(json => {
+          const a = json.data;
+          document.getElementById('editTitle').value = a.title;
+          document.getElementById('editSummary').value = a.summary || '';
+          document.getElementById('editCover').value = a.cover_image || '';
+          document.getElementById('editCategory').value = a.category_id || '';
+          document.getElementById('editContent').value = a.content;
+        });
+      } else {
+        document.getElementById('editTitle').value = '';
+        document.getElementById('editSummary').value = '';
+        document.getElementById('editCover').value = '';
+        document.getElementById('editContent').value = '';
+      }
+    }
+    
+    function closeEditor() { document.getElementById('editorModal').style.display = 'none'; }
+    
+    function saveArticle() {
+      const data = {
+        title: document.getElementById('editTitle').value,
+        summary: document.getElementById('editSummary').value,
+        cover_image: document.getElementById('editCover').value,
+        category_id: parseInt(document.getElementById('editCategory').value) || 0,
+        content: document.getElementById('editContent').value
+      };
+      const url = editingId ? `${API}/articles/${editingId}` : `${API}/articles`;
+      const method = editingId ? 'PUT' : 'POST';
+      fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify(data)
+      }).then(() => { closeEditor(); loadArticles(); });
+    }
+    
+    function loadCategoriesPage() {
+      document.getElementById('content').innerHTML = `
+        <div class="card">
+          <h3>分类管理</h3>
+          <div style="margin: 20px 0;">
+            <input type="text" id="newCat" placeholder="新分类名称" style="width: 300px; display: inline-block;">
+            <button class="btn btn-primary" onclick="addCategory()">添加</button>
+          </div>
+          <div id="cat-list" style="display: grid; gap: 10px;"></div>
+        </div>
+      `;
+      loadCategories();
+    }
+    
+    function loadCategories() {
+      fetch(`${API}/categories`).then(res => res.json()).then(json => {
+        const list = document.getElementById('cat-list');
+        list.innerHTML = '';
+        json.data.forEach(cat => {
+          const div = document.createElement('div');
+          div.style.cssText = 'border: 1px solid #e9ecef; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between;';
+          div.innerHTML = `<span>${cat.name}</span><button class="btn btn-danger" onclick="deleteCat(${cat.id})">删除</button>`;
+          list.appendChild(div);
+        });
+      });
+    }
+    
+    function addCategory() {
+      const name = document.getElementById('newCat').value;
+      if (!name) return alert('请输入分类名称');
+      fetch(`${API}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ name })
+      }).then(() => { document.getElementById('newCat').value = ''; loadCategories(); });
+    }
+    
+    function deleteCat(id) {
+      if (!confirm('确定删除？')) return;
+      fetch(`${API}/categories/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      }).then(() => loadCategories());
+    }
+    
+    function loadImagesPage() {
+  document.getElementById('content').innerHTML = `
+    <div class="card">
+      <h3>图床管理</h3>
+      <div id="uploadArea" style="border: 2px dashed #ddd; padding: 60px; text-align: center; border-radius: 10px; margin: 20px 0; cursor: pointer;">
+        <p style="font-size: 16px; color: #666;">📷 点击或拖拽图片到此处上传</p>
+        <input type="file" id="imgFile" accept="image/*" style="display:none">
+      </div>
+      <div id="uploadResult"></div>
+      <h4 style="margin-top: 30px;">上传历史</h4>
+      <div id="imageHistory" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;"></div>
+    </div>
+  `;
+  const area = document.getElementById('uploadArea');
+  const input = document.getElementById('imgFile');
+  area.onclick = () => input.click();
+  area.ondragover = (e) => { e.preventDefault(); area.style.borderColor = '#667eea'; };
+  area.ondragleave = () => { area.style.borderColor = '#ddd'; };
+  area.ondrop = (e) => { e.preventDefault(); area.style.borderColor = '#ddd'; if(e.dataTransfer.files[0]) uploadImage(e.dataTransfer.files[0]); };
+  input.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0]); };
+  loadImageHistory();
+}
+;
+      area.ondragleave = () => { area.style.borderColor = '#ddd'; };
+      area.ondrop = (e) => { e.preventDefault(); area.style.borderColor = '#ddd'; if(e.dataTransfer.files[0]) uploadImage(e.dataTransfer.files[0]); };
+      input.onchange = (e) => { if(e.target.files[0]) uploadImage(e.target.files[0]); };
+    }
+    
+    function uploadImage(file) {
+  const result = document.getElementById('uploadResult');
+  result.innerHTML = '<p style="text-align:center; color:#666;">上传中...</p>';
+  const formData = new FormData();
+  formData.append('image', file);
+  fetch(`${API}/upload`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    const history = JSON.parse(localStorage.getItem('imageHistory') || '[]');
+    history.unshift({url: data.url, time: Date.now()});
+    localStorage.setItem('imageHistory', JSON.stringify(history.slice(0, 20)));
+    result.innerHTML = `<div style="border: 1px solid #e9ecef; padding: 20px; border-radius: 10px; margin-top: 20px;"><h4 style="color: #51cf66;">✅ 上传成功！</h4><img src="${data.url}" style="max-width: 300px; border-radius: 8px; margin: 15px 0;"><div style="display: flex; gap: 10px;"><input value="${data.url}" readonly style="flex: 1; padding: 10px;"><button class="btn btn-primary" onclick="navigator.clipboard.writeText('${data.url}');alert('已复制')">复制</button></div></div>`;
+    loadImageHistory();
+  });
+}
+
+function loadImageHistory() {
+  const history = JSON.parse(localStorage.getItem('imageHistory') || '[]');
+  const list = document.getElementById('imageHistory');
+  list.innerHTML = '';
+  history.forEach(item => {
+    const div = document.createElement('div');
+    div.style.cssText = 'border: 1px solid #e9ecef; border-radius: 8px; overflow: hidden;';
+    div.innerHTML = `<img src="${item.url}" style="width: 100%; height: 150px; object-fit: cover;"><div style="padding: 10px;"><button class="btn btn-primary" style="width: 100%;" onclick="navigator.clipboard.writeText('${item.url}');alert('已复制')">复制链接</button></div>`;
+    list.appendChild(div);
+  });
+}
+/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        result.innerHTML = `
+          <div style="border: 1px solid #e9ecef; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <h4 style="color: #51cf66; margin-bottom: 15px;">✅ 上传成功！</h4>
+            <img src="${data.url}" style="max-width: 300px; border-radius: 8px; margin-bottom: 15px;">
+            <div style="display: flex; gap: 10px;">
+              <input value="${data.url}" readonly style="flex: 1; padding: 10px;">
+              <button class="btn btn-primary" onclick="navigator.clipboard.writeText('${data.url}');alert('已复制')">复制</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+    
+    function logout() {
+      localStorage.removeItem('token');
+      location.href = '/admin/login.html';
+    }
+    
+    loadArticlesPage();
+  </script>
+</body>
+</html>

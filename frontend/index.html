@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alexcld - 博客首页</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
+    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .subtitle { opacity: 0.9; font-size: 1.1rem; }
+    
+    .filter-bar { background: white; padding: 1.5rem; margin: 2rem 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; gap: 1rem; flex-wrap: wrap; }
+    .search-box { flex: 1; min-width: 250px; }
+    .search-box input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+    .category-filter { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .category-btn { padding: 0.5rem 1rem; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+    .category-btn:hover { background: #e0e0e0; }
+    .category-btn.active { background: #667eea; color: white; }
+    
+    main { padding: 2rem 0; }
+    .loading { text-align: center; padding: 3rem; font-size: 1.2rem; color: #666; }
+    .article-list { display: grid; gap: 1.5rem; }
+    .article-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; }
+    .article-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+    .article-cover { width: 100%; height: 200px; object-fit: cover; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .article-content { padding: 1.5rem; }
+    .article-title { font-size: 1.5rem; margin-bottom: 0.5rem; color: #333; }
+    .article-summary { color: #666; margin-bottom: 1rem; line-height: 1.6; }
+    .article-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #999; }
+    .article-category { background: #667eea; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem; }
+    
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
+    .page-btn { padding: 0.5rem 1rem; background: white; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
+    .page-btn:hover:not(:disabled) { background: #667eea; color: white; border-color: #667eea; }
+    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .page-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    
+    @media (max-width: 768px) {
+      h1 { font-size: 1.8rem; }
+      .filter-bar { flex-direction: column; }
+      .search-box { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Alexcld</h1>
+      <p class="subtitle">children don't lie</p>
+    </div>
+  </header>
+  
+  <main class="container">
+    <div class="filter-bar">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="🔍 搜索文章标题...">
+      </div>
+      <div class="category-filter">
+        <span>分类：</span>
+        <button class="category-btn active" data-id="0">全部</button>
+        <div id="category-list"></div>
+      </div>
+    </div>
+    
+    <div id="loading" class="loading">加载中...</div>
+    <div id="article-list" class="article-list"></div>
+    <div id="pagination" class="pagination"></div>
+  </main>
+  
+  <script>
+    const API = 'http://172.28.74.191:30083/api';
+    let currentPage = 1, currentCategory = 0, searchKeyword = '';
+    
+    async function loadCategories() {
+      const res = await fetch(`${API}/categories`);
+      const json = await res.json();
+      const list = document.getElementById('category-list');
+      json.data.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.className = 'category-btn';
+        btn.textContent = cat.name;
+        btn.dataset.id = cat.id;
+        btn.onclick = () => filterByCategory(cat.id);
+        list.appendChild(btn);
+      });
+    }
+    
+    function filterByCategory(id) {
+      currentCategory = id;
+      currentPage = 1;
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.id == id);
+      });
+      loadArticles();
+    }
+    
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      searchKeyword = e.target.value.trim();
+      currentPage = 1;
+      loadArticles();
+    });
+    
+    async function loadArticles() {
+      try {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('article-list').innerHTML = '';
+        
+        let url = `${API}/articles?page=${currentPage}&pageSize=10`;
+        if (currentCategory > 0) url += `&category_id=${currentCategory}`;
+        if (searchKeyword) url += `&search=${encodeURIComponent(searchKeyword)}`;
+        
+        const res = await fetch(url);
+        const json = await res.json();
+        
+        document.getElementById('loading').style.display = 'none';
+        
+        if (json.data && json.data.length > 0) {
+          renderArticles(json.data);
+          renderPagination(json.page, json.total, json.page_size);
+        } else {
+          document.getElementById('article-list').innerHTML = '<p class="loading">暂无文章</p>';
+        }
+      } catch (error) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('article-list').innerHTML = '<p class="loading">加载失败</p>';
+      }
+    }
+    
+    function renderArticles(articles) {
+      const listEl = document.getElementById('article-list');
+      articles.forEach(article => {
+        const card = document.createElement('div');
+        card.className = 'article-card';
+        card.onclick = () => window.location.href = `/post.html?id=${article.id}`;
+        card.innerHTML = `
+          ${article.cover_image ? `<img class="article-cover" src="${article.cover_image}" alt="${article.title}">` : '<div class="article-cover"></div>'}
+          <div class="article-content">
+            <h2 class="article-title">${article.title}</h2>
+            ${article.summary ? `<p class="article-summary">${article.summary}</p>` : ''}
+            <div class="article-meta">
+              <span>👁️ ${article.views || 0} 次阅读</span>
+              ${article.category ? `<span class="article-category">${article.category.name}</span>` : ''}
+            </div>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+    
+    function renderPagination(page, total, pageSize) {
+      const totalPages = Math.ceil(total / pageSize);
+      const paginationEl = document.getElementById('pagination');
+      paginationEl.innerHTML = '';
+      if (totalPages <= 1) return;
+      
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'page-btn';
+      prevBtn.textContent = '上一页';
+      prevBtn.disabled = page === 1;
+      prevBtn.onclick = () => { currentPage = page - 1; loadArticles(); };
+      paginationEl.appendChild(prevBtn);
+      
+      for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
+          const pageBtn = document.createElement('button');
+          pageBtn.className = 'page-btn' + (i === page ? ' active' : '');
+          pageBtn.textContent = i;
+          pageBtn.onclick = () => { currentPage = i; loadArticles(); };
+          paginationEl.appendChild(pageBtn);
+        } else if (i === page - 3 || i === page + 3) {
+          const dots = document.createElement('span');
+          dots.textContent = '...';
+          dots.style.padding = '0.5rem';
+          paginationEl.appendChild(dots);
+        }
+      }
+      
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'page-btn';
+      nextBtn.textContent = '下一页';
+      nextBtn.disabled = page === totalPages;
+      nextBtn.onclick = () => { currentPage = page + 1; loadArticles(); };
+      paginationEl.appendChild(nextBtn);
+    }
+    
+    loadCategories();
+    loadArticles();
+  </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>测试</title>
+</head>
+<body>
+  <h1>文章列表测试</h1>
+  <div id="test"></div>
+  <script>
+    fetch('http://172.28.74.191:30083/api/articles')
+      .then(res => res.json())
+      .then(json => {
+        document.getElementById('test').innerHTML = '<p>成功获取 ' + json.data.length + ' 篇文章</p>';
+        json.data.forEach(a => {
+          document.getElementById('test').innerHTML += '<p>' + a.title + '</p>';
+        });
+      })
+      .catch(err => {
+        document.getElementById('test').innerHTML = '<p style="color:red;">错误: ' + err + '</p>';
+      });
+  </script>
+</body>
+</html>

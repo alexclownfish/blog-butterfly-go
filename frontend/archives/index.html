@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>归档 | Alexcld</title>
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
+</head>
+<body>
+  <div id="body-wrap">
+    <header id="page-header">
+      <nav id="nav">
+        <span id="blog_name"><a href="/">Alexcld</a></span>
+      </nav>
+    </header>
+    
+    <main class="layout" id="content-inner">
+      <div id="archive">
+        <h1>归档</h1>
+        <div id="archive-list"></div>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    const API = 'http://172.28.74.191:30083/api';
+    
+    fetch(`${API}/articles?page=1&page_size=100`)
+      .then(res => res.json())
+      .then(json => {
+        const articles = json.data || [];
+        const container = document.getElementById('archive-list');
+        
+        // 按年份分组
+        const groups = {};
+        articles.forEach(article => {
+          const year = new Date(article.created_at).getFullYear();
+          if (!groups[year]) groups[year] = [];
+          groups[year].push(article);
+        });
+        
+        // 渲染
+        Object.keys(groups).sort((a, b) => b - a).forEach(year => {
+          const yearDiv = document.createElement('div');
+          yearDiv.innerHTML = `<h2>${year}</h2>`;
+          groups[year].forEach(article => {
+            const item = document.createElement('div');
+            item.style.padding = '10px 0';
+            item.innerHTML = `
+              <span>${new Date(article.created_at).toLocaleDateString('zh-CN')}</span>
+              <a href="/post.html?id=${article.id}">${article.title}</a>
+            `;
+            yearDiv.appendChild(item);
+          });
+          container.appendChild(yearDiv);
+        });
+      });
+  </script>
+</body>
+</html>

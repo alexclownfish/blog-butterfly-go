@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>编辑文章</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; }
+    .header { background: #49b1f5; color: white; padding: 15px 20px; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+    input, select { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; }
+    button { padding: 12px 30px; margin-right: 10px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-save { background: #49b1f5; color: white; }
+    .btn-cancel { background: #ddd; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>编辑文章</h2>
+  </div>
+  <div class="container">
+    <input type="text" id="title" placeholder="标题">
+    <input type="text" id="summary" placeholder="摘要">
+    <input type="text" id="cover_image" placeholder="封面图片 URL">
+    <select id="category_id">
+      <option value="">选择分类</option>
+    </select>
+    <textarea id="content"></textarea>
+    <div style="margin-top: 20px;">
+      <button class="btn-save" onclick="save()">保存</button>
+      <button class="btn-cancel" onclick="history.back()">取消</button>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
+  <script>
+    const API = 'http://172.28.74.191:30083/api';
+    const token = localStorage.getItem('token');
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = urlParams.get('id');
+    
+    const editor = new EasyMDE({ element: document.getElementById('content') });
+    
+    // 加载分类
+    fetch(`${API}/categories`).then(res => res.json()).then(json => {
+      const select = document.getElementById('category_id');
+      json.data.forEach(cat => {
+        select.innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+      });
+    });
+    
+    // 如果是编辑，加载文章
+    if (articleId) {
+      fetch(`${API}/articles/${articleId}`).then(res => res.json()).then(json => {
+        const article = json.data;
+        document.getElementById('title').value = article.title;
+        document.getElementById('summary').value = article.summary || '';
+        document.getElementById('cover_image').value = article.cover_image || '';
+        document.getElementById('category_id').value = article.category_id || '';
+        editor.value(article.content);
+      });
+    }
+    
+    function save() {
+      const data = {
+        title: document.getElementById('title').value,
+        summary: document.getElementById('summary').value,
+        cover_image: document.getElementById('cover_image').value,
+        category_id: parseInt(document.getElementById('category_id').value) || 0,
+        content: editor.value()
+      };
+      
+      const url = articleId ? `${API}/articles/${articleId}` : `${API}/articles`;
+      const method = articleId ? 'PUT' : 'POST';
+      
+      fetch(url, {
+        method,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(data)
+      })
+      .then(() => location.href = '/admin/')
+      .catch(err => alert('保存失败'));
+    }
+  </script>
+</body>
+</html>

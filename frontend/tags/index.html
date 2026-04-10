@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>标签 | Alexcld</title>
+  <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+  <div id="body-wrap">
+    <header id="page-header">
+      <nav id="nav">
+        <span id="blog_name"><a href="/">Alexcld</a></span>
+      </nav>
+    </header>
+    <main class="layout" id="content-inner">
+      <h1>标签</h1>
+      <div id="tag-list"></div>
+    </main>
+  </div>
+  <script>
+    fetch('http://172.28.74.191:30083/api/tags')
+      .then(res => res.json())
+      .then(json => {
+        const container = document.getElementById('tag-list');
+        json.data.forEach(tag => {
+          const span = document.createElement('span');
+          span.style.margin = '5px';
+          span.innerHTML = `<a href="/">${tag.name}</a>`;
+          container.appendChild(span);
+        });
+      });
+  </script>
+</body>
+</html>

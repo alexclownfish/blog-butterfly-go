@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>分类 | Alexcld</title>
+  <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+  <div id="body-wrap">
+    <header id="page-header">
+      <nav id="nav">
+        <span id="blog_name"><a href="/">Alexcld</a></span>
+      </nav>
+    </header>
+    <main class="layout" id="content-inner">
+      <h1>分类</h1>
+      <div id="category-list"></div>
+    </main>
+  </div>
+  <script>
+    fetch('http://172.28.74.191:30083/api/categories')
+      .then(res => res.json())
+      .then(json => {
+        const container = document.getElementById('category-list');
+        json.data.forEach(cat => {
+          const div = document.createElement('div');
+          div.innerHTML = `<a href="/?category_id=${cat.id}">${cat.name}</a>`;
+          container.appendChild(div);
+        });
+      });
+  </script>
+</body>
+</html>

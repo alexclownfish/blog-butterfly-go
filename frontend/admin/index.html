@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>后台管理</title>
+  <link rel="stylesheet" href="/admin/style.css">
+</head>
+<body>
+  <div class="header">
+    <h2>📝 博客管理系统</h2>
+    <button onclick="logout()">退出登录</button>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <a href="#" onclick="showPage('articles')" class="active">📄 文章管理</a>
+      <a href="#" onclick="showPage('categories')">📁 分类管理</a>
+      <a href="#" onclick="showPage('images')">🖼️ 图床管理</a>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+  
+  <div id="editorModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000;">
+    <div style="background:white; width:90%; max-width:1000px; height:90%; margin:2% auto; border-radius:10px; overflow:auto; padding:30px;">
+      <h3 id="editorTitle">新建文章</h3>
+      <input type="text" id="editTitle" placeholder="标题">
+      <input type="text" id="editSummary" placeholder="摘要">
+      <input type="text" id="editCover" placeholder="封面图 URL">
+      <select id="editCategory"><option value="">选择分类</option></select>
+      <textarea id="editContent" style="height:300px;"></textarea>
+      <div style="margin-top:20px;">
+        <button class="btn btn-primary" onclick="saveArticle()">保存</button>
+        <button class="btn" onclick="closeEditor()">取消</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="/admin/app.js"></script>
+</body>
+</html>
