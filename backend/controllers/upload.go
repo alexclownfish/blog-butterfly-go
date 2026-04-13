@@ -13,13 +13,13 @@ func UploadImage(c *gin.Context) {
 		return
 	}
 	defer file.Close()
-	
+
 	url, err := utils.UploadToQiniu(file, header.Filename)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "上传到七牛云失败"})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{"url": url})
 }
 

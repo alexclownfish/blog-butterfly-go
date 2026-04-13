@@ -4,226 +4,734 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>文章详情 - Alexcld</title>
+  <meta name="description" content="Alexcld 技术博客文章详情页。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root {
+      --bg: #050816;
+      --bg-soft: rgba(255,255,255,0.04);
+      --panel: rgba(10, 14, 31, 0.78);
+      --panel-strong: rgba(10, 14, 31, 0.92);
+      --border: rgba(255,255,255,0.1);
+      --text: #f5f7ff;
+      --muted: #97a0c3;
+      --muted-strong: #c6ccef;
+      --brand: #7c8cff;
+      --brand-2: #4de2c5;
+      --accent: #8f5cff;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --container: 1240px;
     }
-    
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      line-height: 1.8;
-      color: #333;
-      background: #f5f5f5;
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,140,255,0.22), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(77,226,197,0.16), transparent 25%),
+        linear-gradient(180deg, #070b1b 0%, #050816 45%, #040611 100%);
+      min-height: 100vh;
     }
-    
-    header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 1.5rem 0;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      opacity: 0.45;
     }
-    
+
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; }
+
+    .site-shell {
+      position: relative;
+      z-index: 1;
+      padding: 28px 0 72px;
+    }
+
     .container {
-      max-width: 900px;
+      width: min(var(--container), calc(100% - 32px));
       margin: 0 auto;
-      padding: 0 20px;
     }
-    
-    .back-btn {
-      display: inline-block;
-      color: white;
-      text-decoration: none;
-      padding: 0.5rem 1rem;
-      background: rgba(255,255,255,0.2);
-      border-radius: 4px;
-      transition: background 0.3s;
-    }
-    
-    .back-btn:hover {
-      background: rgba(255,255,255,0.3);
-    }
-    
-    main {
-      background: white;
-      margin: 2rem auto;
-      padding: 3rem;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 3rem;
-      color: #666;
-    }
-    
-    #article-title {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-      color: #333;
-    }
-    
-    .article-meta {
+
+    .topbar {
       display: flex;
-      gap: 1.5rem;
-      padding: 1rem 0;
-      border-bottom: 2px solid #f0f0f0;
-      margin-bottom: 2rem;
-      color: #666;
-      font-size: 0.95rem;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.16);
+      position: sticky;
+      top: 18px;
+      z-index: 30;
     }
-    
-    #article-content {
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 30px rgba(124,140,255,0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .hero {
+      margin-top: 26px;
+      padding: 38px;
+      border-radius: calc(var(--radius-xl) + 8px);
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.18), rgba(255,255,255,0.04) 42%, rgba(77,226,197,0.12)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,140,255,0.35), transparent 65%);
+      right: -140px;
+      top: -140px;
+      pointer-events: none;
+    }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbe1ff;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #eff2ff;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease;
+      margin-bottom: 18px;
+    }
+
+    .back-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,0.09);
+      border-color: rgba(124,140,255,0.35);
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 4.8rem);
+      line-height: 0.98;
+      letter-spacing: -0.06em;
+      max-width: 14ch;
+      margin-bottom: 16px;
+    }
+
+    .hero-summary {
+      max-width: 70ch;
+      color: var(--muted-strong);
       font-size: 1.05rem;
-      line-height: 1.8;
     }
-    
-    #article-content h1,
-    #article-content h2,
-    #article-content h3 {
-      margin-top: 2rem;
-      margin-bottom: 1rem;
-      color: #333;
+
+    .meta-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
     }
-    
-    #article-content h1 { font-size: 2rem; }
-    #article-content h2 { font-size: 1.6rem; }
-    #article-content h3 { font-size: 1.3rem; }
-    
-    #article-content p {
-      margin-bottom: 1rem;
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--muted-strong);
+      font-size: 0.92rem;
     }
-    
-    #article-content code {
-      background: #f5f5f5;
-      padding: 0.2rem 0.4rem;
-      border-radius: 3px;
-      font-family: 'Courier New', monospace;
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 22px;
+      align-items: start;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .article-shell {
+      padding: 28px;
+    }
+
+    .content-prose {
+      color: #eef2ff;
+      font-size: 1.04rem;
+      line-height: 1.9;
+      word-break: break-word;
+    }
+
+    .content-prose > *:first-child { margin-top: 0; }
+    .content-prose > *:last-child { margin-bottom: 0; }
+
+    .content-prose h1,
+    .content-prose h2,
+    .content-prose h3,
+    .content-prose h4 {
+      margin: 2.2rem 0 1rem;
+      line-height: 1.2;
+      letter-spacing: -0.04em;
+      color: #ffffff;
+      scroll-margin-top: 110px;
+    }
+
+    .content-prose h1 { font-size: 2rem; }
+    .content-prose h2 { font-size: 1.62rem; }
+    .content-prose h3 { font-size: 1.28rem; }
+    .content-prose h4 { font-size: 1.06rem; }
+
+    .content-prose p,
+    .content-prose ul,
+    .content-prose ol,
+    .content-prose blockquote,
+    .content-prose table,
+    .content-prose pre,
+    .content-prose img {
+      margin: 1.1rem 0;
+    }
+
+    .content-prose ul,
+    .content-prose ol {
+      padding-left: 1.5rem;
+    }
+
+    .content-prose li + li { margin-top: 0.45rem; }
+
+    .content-prose a {
+      color: #99e8da;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(153,232,218,0.3);
+    }
+
+    .content-prose a:hover {
+      color: white;
+      border-bottom-color: rgba(255,255,255,0.55);
+    }
+
+    .content-prose strong { color: #fff; }
+
+    .content-prose code {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 0.2rem 0.45rem;
+      border-radius: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       font-size: 0.9em;
+      color: #c6fdf4;
     }
-    
-    #article-content pre {
-      background: #2d2d2d;
-      color: #f8f8f2;
+
+    .content-prose pre {
+      position: relative;
+      background: linear-gradient(180deg, rgba(13,19,41,0.98), rgba(8,13,28,0.98));
+      color: #f3f6ff;
       padding: 1rem;
-      border-radius: 4px;
+      border-radius: 18px;
       overflow-x: auto;
-      margin: 1rem 0;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    
-    #article-content pre code {
+
+    .content-prose pre code {
       background: none;
+      border: none;
       padding: 0;
       color: inherit;
     }
-    
-    #article-content img {
+
+    .copy-btn {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      padding: 7px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(255,255,255,0.08);
+      color: white;
+      cursor: pointer;
+      font-size: 0.86rem;
+      transition: all .2s ease;
+    }
+
+    .copy-btn:hover { background: rgba(255,255,255,0.14); }
+    .copy-btn.copied { background: rgba(77,226,197,0.18); border-color: rgba(77,226,197,0.35); color: #9df7e7; }
+
+    .content-prose img {
       max-width: 100%;
       height: auto;
-      border-radius: 4px;
-      margin: 1rem 0;
+      border-radius: 16px;
+      display: block;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.28);
     }
-    
-    #article-content blockquote {
-      border-left: 4px solid #667eea;
-      padding-left: 1rem;
-      margin: 1rem 0;
-      color: #666;
-      font-style: italic;
+
+    .content-prose blockquote {
+      padding: 1rem 1.15rem;
+      border-left: 4px solid var(--brand);
+      background: rgba(124,140,255,0.1);
+      border-radius: 0 16px 16px 0;
+      color: #d9e0ff;
     }
-    
-    #article-content ul, #article-content ol {
-      margin-left: 2rem;
-      margin-bottom: 1rem;
+
+    .content-prose hr {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+      margin: 2rem 0;
     }
-    
-    #article-content li {
-      margin-bottom: 0.5rem;
+
+    .content-prose table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 16px;
+      border-style: hidden;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+      display: block;
+      overflow-x: auto;
     }
-    
-    #article-content a {
-      color: #667eea;
-      text-decoration: none;
+
+    .content-prose th,
+    .content-prose td {
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(255,255,255,0.08);
+      text-align: left;
+      white-space: nowrap;
     }
-    
-    #article-content a:hover {
-      text-decoration: underline;
+
+    .content-prose th {
+      background: rgba(255,255,255,0.06);
+      color: #fff;
     }
-    
-    @media (max-width: 768px) {
-      main {
-        padding: 1.5rem;
-        margin: 1rem;
+
+    .side-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 92px;
+    }
+
+    .side-card {
+      padding: 20px;
+    }
+
+    .side-card h3 {
+      font-size: 1.02rem;
+      margin-bottom: 6px;
+      letter-spacing: -0.03em;
+    }
+
+    .side-card p,
+    .side-card li,
+    .state-text,
+    .loading,
+    .error-state p {
+      color: var(--muted);
+    }
+
+    .toc-list {
+      list-style: none;
+      margin-top: 14px;
+      display: grid;
+      gap: 8px;
+      max-height: 52vh;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .toc-list a {
+      display: block;
+      padding: 8px 10px;
+      border-radius: 12px;
+      color: var(--muted-strong);
+      background: rgba(255,255,255,0.03);
+      border: 1px solid transparent;
+      transition: all .2s ease;
+      font-size: 0.92rem;
+    }
+
+    .toc-list a:hover,
+    .toc-list a.active {
+      color: white;
+      background: rgba(124,140,255,0.14);
+      border-color: rgba(124,140,255,0.2);
+    }
+
+    .toc-h3 a { padding-left: 20px; }
+    .toc-h4 a { padding-left: 30px; }
+
+    .loading,
+    .error-state {
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .error-state strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      margin-top: 26px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 1024px) {
+      .layout {
+        grid-template-columns: 1fr;
       }
-      
-      #article-title {
-        font-size: 1.8rem;
+
+      .side-stack {
+        position: static;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .site-shell { padding-top: 18px; }
+
+      .topbar {
+        border-radius: 24px;
+        align-items: flex-start;
+      }
+
+      .topbar,
+      .topbar-meta {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hero,
+      .article-shell,
+      .side-card {
+        border-radius: 20px;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .article-shell {
+        padding: 20px;
+      }
+
+      .hero-title {
+        max-width: none;
       }
     }
   </style>
 </head>
 <body>
-  <header>
+  <div class="site-shell">
     <div class="container">
-      <a href="/" class="back-btn">← 返回首页</a>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div class="brand-copy">
+            <strong>Alexcld</strong>
+            <span>children don't lie · 技术博客母舰已升空</span>
+          </div>
+        </div>
+        <div class="topbar-meta">
+          <span class="pill">文章详情页</span>
+          <span class="pill" id="topbar-status">内容准备中…</span>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-content">
+          <a href="/" class="back-link" id="back-link">← 返回列表</a>
+          <div class="eyebrow">✦ 深读模式已开启</div>
+          <h1 class="hero-title" id="article-title">加载中...</h1>
+          <p class="hero-summary" id="article-summary">正在为你装载正文内容，请稍等片刻。</p>
+          <div class="meta-row">
+            <span class="meta-pill" id="article-category">📁 未分类</span>
+            <span class="meta-pill" id="article-views">👁️ 0 次阅读</span>
+            <span class="meta-pill" id="article-date">🗓️ 暂无日期</span>
+          </div>
+        </div>
+      </section>
+
+      <main class="layout">
+        <section class="card article-shell">
+          <div id="loading" class="loading">文章内容装载中，请稍候…</div>
+          <div id="error-state" class="error-state" hidden>
+            <strong id="error-title">文章不存在</strong>
+            <p id="error-message">请检查链接是否正确，或者回到列表继续逛逛。</p>
+          </div>
+          <article id="article" class="content-prose" hidden></article>
+        </section>
+
+        <aside class="side-stack">
+          <section class="card side-card">
+            <h3>阅读状态</h3>
+            <p class="state-text" id="reading-state">文章加载完成后，这里会显示当前阅读信息。</p>
+          </section>
+          <section class="card side-card" id="toc-card" hidden>
+            <h3>目录导航</h3>
+            <p>点击标题可快速跳转，不用疯狂滚轮搓火星子。</p>
+            <ul class="toc-list" id="toc-list"></ul>
+          </section>
+        </aside>
+      </main>
+
+      <div class="footer-note">Unified with the new homepage · Readable, modern, still API-driven ✨</div>
     </div>
-  </header>
-  
-  <main class="container">
-    <div id="loading" class="loading">加载中...</div>
-    <div id="article" style="display: none;">
-      <h1 id="article-title"></h1>
-      <div class="article-meta">
-        <span id="article-category"></span>
-        <span id="article-views"></span>
-        <span id="article-date"></span>
-      </div>
-      <div id="article-content"></div>
-    </div>
-  </main>
-  
+  </div>
+
+  <script src="/js/config.js"></script>
   <script>
-    const API = 'http://172.28.74.191:30083/api';
-    const id = new URLSearchParams(window.location.search).get('id');
-    
-    if (!id) {
-      document.getElementById('loading').textContent = '文章不存在';
-    } else {
-      fetch(`${API}/articles/${id}`)
-        .then(res => res.json())
-        .then(json => {
-          if (json.data) {
-            const article = json.data;
-            
-            document.getElementById('article-title').textContent = article.title;
-            document.getElementById('article-content').innerHTML = marked.parse(article.content || '');
-            document.title = article.title + ' | Alexcld';
-            
-            if (article.category) {
-              document.getElementById('article-category').innerHTML = `📁 ${article.category.name}`;
-            }
-            
-            document.getElementById('article-views').innerHTML = `👁️ ${article.views || 0} 次阅读`;
-            
-            if (article.created_at) {
-              const date = new Date(article.created_at).toLocaleDateString('zh-CN');
-              document.getElementById('article-date').innerHTML = `📅 ${date}`;
-            }
-            
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('article').style.display = 'block';
-          } else {
-            document.getElementById('loading').textContent = '文章不存在';
-          }
-        })
-        .catch(error => {
-          console.error('加载失败:', error);
-          document.getElementById('loading').textContent = '加载失败，请稍后重试';
-        });
+    const API = window.getApiBase();
+    const pageParams = new URLSearchParams(window.location.search);
+    const id = pageParams.get('id');
+    const from = pageParams.get('from');
+    const backLink = document.getElementById('back-link');
+    const loadingEl = document.getElementById('loading');
+    const articleEl = document.getElementById('article');
+    const errorStateEl = document.getElementById('error-state');
+    const topbarStatusEl = document.getElementById('topbar-status');
+    const readingStateEl = document.getElementById('reading-state');
+    const tocCardEl = document.getElementById('toc-card');
+    const tocListEl = document.getElementById('toc-list');
+
+    if (from && from.startsWith('/')) {
+      backLink.href = from;
     }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDate(value) {
+      if (!value) return '🗓️ 暂无日期';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '🗓️ 暂无日期';
+      return `🗓️ ${date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' })}`;
+    }
+
+    function plainTextFromMarkdown(markdown) {
+      return String(markdown || '')
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+        .replace(/\[[^\]]+\]\([^)]*\)/g, '$1')
+        .replace(/[#>*_~\-]+/g, ' ')
+        .replace(/\n+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function showError(title, message) {
+      loadingEl.hidden = true;
+      articleEl.hidden = true;
+      errorStateEl.hidden = false;
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-message').textContent = message;
+      topbarStatusEl.textContent = '内容加载失败';
+      readingStateEl.textContent = '当前没有可阅读内容。';
+    }
+
+    function addCopyButtons() {
+      articleEl.querySelectorAll('pre').forEach(pre => {
+        if (pre.querySelector('.copy-btn')) return;
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.type = 'button';
+        btn.textContent = '复制';
+        btn.onclick = async () => {
+          const code = pre.querySelector('code') ? pre.querySelector('code').textContent : pre.textContent;
+          try {
+            await navigator.clipboard.writeText(code);
+            btn.textContent = '已复制';
+            btn.classList.add('copied');
+            setTimeout(() => {
+              btn.textContent = '复制';
+              btn.classList.remove('copied');
+            }, 1800);
+          } catch (error) {
+            btn.textContent = '复制失败';
+            setTimeout(() => { btn.textContent = '复制'; }, 1800);
+          }
+        };
+        pre.appendChild(btn);
+      });
+    }
+
+    function buildTOC() {
+      const headings = articleEl.querySelectorAll('h2, h3, h4');
+      tocListEl.innerHTML = '';
+      if (!headings.length) {
+        tocCardEl.hidden = true;
+        return;
+      }
+
+      headings.forEach((heading, index) => {
+        const headingId = heading.id || `heading-${index}`;
+        heading.id = headingId;
+        const item = document.createElement('li');
+        item.className = `toc-${heading.tagName.toLowerCase()}`;
+        const link = document.createElement('a');
+        link.href = `#${headingId}`;
+        link.textContent = heading.textContent.trim() || `小节 ${index + 1}`;
+        link.onclick = (event) => {
+          event.preventDefault();
+          heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          document.querySelectorAll('.toc-list a').forEach(a => a.classList.remove('active'));
+          link.classList.add('active');
+        };
+        item.appendChild(link);
+        tocListEl.appendChild(item);
+      });
+
+      tocCardEl.hidden = false;
+    }
+
+    async function loadArticle() {
+      if (!id) {
+        showError('文章不存在', '没有检测到文章 ID，请从列表页重新进入。');
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API}/articles/${id}`);
+        const json = await res.json();
+
+        if (!json.data) {
+          showError('文章不存在', '接口没有返回对应文章，可能已被删除或链接失效。');
+          return;
+        }
+
+        const article = json.data;
+        const title = article.title || '未命名文章';
+        const summary = plainTextFromMarkdown(article.summary || article.content || '').slice(0, 140) || '这篇文章没有单独摘要，但正文已经准备好了。';
+        const categoryName = article.category?.name || '未分类';
+        const views = article.views || 0;
+
+        document.title = `${title} | Alexcld`;
+        document.getElementById('article-title').textContent = title;
+        document.getElementById('article-summary').textContent = summary;
+        document.getElementById('article-category').textContent = `📁 ${categoryName}`;
+        document.getElementById('article-views').textContent = `👁️ ${views} 次阅读`;
+        document.getElementById('article-date').textContent = formatDate(article.created_at);
+        topbarStatusEl.textContent = '文章已就绪';
+        readingStateEl.textContent = `当前正在阅读《${title}》，分类：${categoryName}，阅读量：${views}。`;
+
+        articleEl.innerHTML = marked.parse(article.content || '');
+        addCopyButtons();
+        buildTOC();
+
+        loadingEl.hidden = true;
+        errorStateEl.hidden = true;
+        articleEl.hidden = false;
+      } catch (error) {
+        console.error('加载失败:', error);
+        showError('加载失败', '请求文章内容时出了点小状况，请稍后重试。');
+      }
+    }
+
+    loadArticle();
   </script>
 </body>
 </html>

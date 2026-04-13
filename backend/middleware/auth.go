@@ -15,7 +15,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		token := strings.TrimPrefix(auth, "Bearer ")
 		claims, err := utils.ParseToken(token)
 		if err != nil {
@@ -23,7 +23,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		c.Set("user_id", claims.UserID)
 		c.Next()
 	}

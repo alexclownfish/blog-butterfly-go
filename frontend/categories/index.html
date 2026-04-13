@@ -2,32 +2,543 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>分类 | Alexcld</title>
-  <link rel="stylesheet" href="/css/index.css">
+  <meta name="description" content="Alexcld 博客分类页，按分类查看全部技术内容。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: rgba(10, 14, 31, 0.78);
+      --border: rgba(255,255,255,0.1);
+      --text: #f5f7ff;
+      --muted: #97a0c3;
+      --muted-strong: #c6ccef;
+      --brand: #7c8cff;
+      --brand-2: #4de2c5;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --container: 1240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,140,255,0.22), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(77,226,197,0.16), transparent 25%),
+        linear-gradient(180deg, #070b1b 0%, #050816 45%, #040611 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      opacity: 0.45;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .site-shell {
+      position: relative;
+      z-index: 1;
+      padding: 28px 0 72px;
+    }
+
+    .container {
+      width: min(var(--container), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.16);
+      position: sticky;
+      top: 18px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 30px rgba(124,140,255,0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .hero {
+      margin-top: 26px;
+      padding: 38px;
+      border-radius: calc(var(--radius-xl) + 8px);
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.18), rgba(255,255,255,0.04) 42%, rgba(77,226,197,0.12)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,140,255,0.35), transparent 65%);
+      right: -140px;
+      top: -140px;
+      pointer-events: none;
+    }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbe1ff;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 5vw, 5rem);
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+      max-width: 11ch;
+      margin-bottom: 16px;
+    }
+
+    .hero-summary {
+      max-width: 68ch;
+      color: var(--muted-strong);
+      font-size: 1.05rem;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .hero-stat {
+      padding: 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hero-stat small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .hero-stat strong {
+      font-size: 1.8rem;
+      letter-spacing: -0.05em;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 22px;
+      align-items: start;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-body { padding: 28px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .section-head h2 {
+      font-size: 1.4rem;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p,
+    .muted {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .category-card {
+      padding: 20px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+      display: grid;
+      gap: 14px;
+    }
+
+    .category-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124,140,255,0.26);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .category-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .category-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      word-break: break-word;
+    }
+
+    .category-badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(124,140,255,0.24), rgba(77,226,197,0.14));
+      border: 1px solid rgba(124,140,255,0.24);
+      color: #eef2ff;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .category-desc {
+      color: var(--muted-strong);
+      font-size: 0.95rem;
+    }
+
+    .category-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #dfe4ff;
+      font-weight: 600;
+    }
+
+    .aside-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 104px;
+    }
+
+    .quick-links {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .quick-link,
+    .status,
+    .empty-state {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--muted-strong);
+    }
+
+    .quick-link {
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .quick-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124,140,255,0.26);
+    }
+
+    .footer {
+      margin-top: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 960px) {
+      .content-grid { grid-template-columns: 1fr; }
+      .aside-stack { position: static; }
+      .hero-stats,
+      .category-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        border-radius: 24px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .hero,
+      .card-body { padding: 22px; }
+      .category-top {
+        flex-direction: column;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div id="body-wrap">
-    <header id="page-header">
-      <nav id="nav">
-        <span id="blog_name"><a href="/">Alexcld</a></span>
-      </nav>
-    </header>
-    <main class="layout" id="content-inner">
-      <h1>分类</h1>
-      <div id="category-list"></div>
-    </main>
+  <div class="site-shell">
+    <div class="container">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <div class="brand-mark">A</div>
+          <div class="brand-copy">
+            <strong>Alexcld</strong>
+            <span>children don't lie · 分类星图展开中</span>
+          </div>
+        </a>
+        <div class="topbar-meta">
+          <a class="pill" href="/">首页</a>
+          <a class="pill" href="/archives/">归档</a>
+          <a class="pill" href="/about/">博主</a>
+          <span class="pill" id="topbar-status">分类读取中…</span>
+        </div>
+      </header>
+
+      <section class="hero card">
+        <div class="hero-content">
+          <div class="eyebrow">🗂️ 分类导航</div>
+          <h1 class="hero-title">按主题找到你想看的内容</h1>
+          <p class="hero-summary">如果首页像逛商场，分类页就像给你发了楼层导览图。Kubernetes、Docker、Oracle、监控、Hexo……想看哪一摊，直接精准空降。</p>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <small>分类总数</small>
+              <strong id="stat-total">--</strong>
+            </div>
+            <div class="hero-stat">
+              <small>首个分类</small>
+              <strong id="stat-first">--</strong>
+            </div>
+            <div class="hero-stat">
+              <small>首页筛选</small>
+              <strong id="stat-filter">ON</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <main class="card">
+          <div class="card-body">
+            <div class="section-head">
+              <div>
+                <h2>全部分类</h2>
+                <p>点击卡片会跳回首页并自动带上分类筛选参数。</p>
+              </div>
+              <div class="muted" id="category-summary">正在整理分类中…</div>
+            </div>
+            <div id="category-list" class="category-grid"></div>
+          </div>
+        </main>
+
+        <aside class="aside-stack">
+          <section class="card">
+            <div class="card-body">
+              <div class="section-head">
+                <div>
+                  <h2>推荐路线</h2>
+                  <p>不同口味，推荐不同入口。</p>
+                </div>
+              </div>
+              <div class="quick-links">
+                <a class="quick-link" href="/?search=kubernetes"><span>直接搜 Kubernetes</span><span>→</span></a>
+                <a class="quick-link" href="/archives/"><span>按时间回溯</span><span>→</span></a>
+                <a class="quick-link" href="/about/"><span>先看博主介绍</span><span>→</span></a>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-body">
+              <div class="section-head">
+                <div>
+                  <h2>说明</h2>
+                  <p>这里不做花活，主打一个快。</p>
+                </div>
+              </div>
+              <div class="status">所有分类链接仍然保持原来的行为：跳回首页并带上 `category_id` 进行筛选，灵魂没丢，只是换了身西装 👔</div>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="footer">© Alexcld · Category radar online ✨</footer>
+    </div>
   </div>
+
+  <script src="/js/config.js"></script>
   <script>
-    fetch('http://172.28.74.191:30083/api/categories')
-      .then(res => res.json())
-      .then(json => {
-        const container = document.getElementById('category-list');
-        json.data.forEach(cat => {
-          const div = document.createElement('div');
-          div.innerHTML = `<a href="/?category_id=${cat.id}">${cat.name}</a>`;
-          container.appendChild(div);
-        });
-      });
+    const API = window.getApiBase();
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+
+    function buildHint(name) {
+      const hints = {
+        kubernetes: '集群、组件、服务暴露与踩坑记录合集。',
+        docker: '容器世界的日常维修手册。',
+        oracle: '数据库那些让人又爱又恨的瞬间。',
+        monitor: 'Prometheus、Grafana、告警与监控实战。',
+        hexo: '博客折腾学，页面与功能改造记录。',
+        linux: '系统层面的常用操作与排障备忘。',
+        kubesphere: '围绕 KubeSphere 的安装与使用记录。',
+        jenkins: 'CI/CD 自动化流水线那些事儿。',
+        clickhouse: '列式数据库部署与同步实践。',
+        nginx: '反向代理、性能优化与静态站部署。'
+      };
+
+      const key = String(name || '').toLowerCase();
+      return hints[key] || `和「${name}」相关的文章都在这里，点进去直接筛。`;
+    }
+
+    async function loadCategories() {
+      const container = document.getElementById('category-list');
+      const summary = document.getElementById('category-summary');
+      const topbarStatus = document.getElementById('topbar-status');
+
+      try {
+        const res = await fetch(`${API}/categories`);
+        const json = await res.json();
+        const categories = Array.isArray(json.data) ? json.data.slice() : [];
+
+        if (!categories.length) {
+          container.innerHTML = '<div class="empty-state">暂时没有分类数据，博主可能还在给知识点分门别类。</div>';
+          summary.textContent = '0 个分类';
+          topbarStatus.textContent = '暂时空空';
+          document.getElementById('stat-total').textContent = '0';
+          document.getElementById('stat-first').textContent = '--';
+          return;
+        }
+
+        categories.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'zh-CN'));
+
+        container.innerHTML = categories.map((cat, index) => `
+          <a class="category-card" href="/?category_id=${encodeURIComponent(cat.id)}">
+            <div class="category-top">
+              <div>
+                <div class="category-name">${escapeHtml(cat.name || '未命名分类')}</div>
+              </div>
+              <div class="category-badge">No.${String(index + 1).padStart(2, '0')}</div>
+            </div>
+            <div class="category-desc">${escapeHtml(buildHint(cat.name))}</div>
+            <div class="category-link">进入这个分类 <span>→</span></div>
+          </a>
+        `).join('');
+
+        document.getElementById('stat-total').textContent = String(categories.length);
+        document.getElementById('stat-first').textContent = String(categories[0].name || '--');
+        summary.textContent = `共 ${categories.length} 个分类，点击后回首页筛选`;
+        topbarStatus.textContent = '分类已就绪';
+      } catch (error) {
+        console.error(error);
+        container.innerHTML = '<div class="empty-state">分类加载失败，可能接口去散步了。稍后再来抓它回来。</div>';
+        summary.textContent = '加载失败';
+        topbarStatus.textContent = '读取失败';
+      }
+    }
+
+    loadCategories();
   </script>
 </body>
 </html>

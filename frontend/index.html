@@ -4,81 +4,878 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alexcld - 博客首页</title>
+  <meta name="description" content="Alexcld 的技术博客首页，聚合运维、开发、Kubernetes 与实战记录。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
-    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 2rem 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-    h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .subtitle { opacity: 0.9; font-size: 1.1rem; }
-    
-    .filter-bar { background: white; padding: 1.5rem; margin: 2rem 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; gap: 1rem; flex-wrap: wrap; }
-    .search-box { flex: 1; min-width: 250px; }
-    .search-box input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
-    .category-filter { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
-    .category-btn { padding: 0.5rem 1rem; background: #f0f0f0; border: none; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
-    .category-btn:hover { background: #e0e0e0; }
-    .category-btn.active { background: #667eea; color: white; }
-    
-    main { padding: 2rem 0; }
-    .loading { text-align: center; padding: 3rem; font-size: 1.2rem; color: #666; }
-    .article-list { display: grid; gap: 1.5rem; }
-    .article-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.3s, box-shadow 0.3s; cursor: pointer; }
-    .article-card:hover { transform: translateY(-4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-    .article-cover { width: 100%; height: 200px; object-fit: cover; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .article-content { padding: 1.5rem; }
-    .article-title { font-size: 1.5rem; margin-bottom: 0.5rem; color: #333; }
-    .article-summary { color: #666; margin-bottom: 1rem; line-height: 1.6; }
-    .article-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; color: #999; }
-    .article-category { background: #667eea; color: white; padding: 0.25rem 0.75rem; border-radius: 4px; font-size: 0.85rem; }
-    
-    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem; }
-    .page-btn { padding: 0.5rem 1rem; background: white; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.3s; }
-    .page-btn:hover:not(:disabled) { background: #667eea; color: white; border-color: #667eea; }
-    .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .page-btn.active { background: #667eea; color: white; border-color: #667eea; }
-    
-    @media (max-width: 768px) {
-      h1 { font-size: 1.8rem; }
-      .filter-bar { flex-direction: column; }
-      .search-box { min-width: 100%; }
+    :root {
+      --bg: #050816;
+      --bg-soft: rgba(255,255,255,0.04);
+      --panel: rgba(10, 14, 31, 0.78);
+      --panel-strong: rgba(10, 14, 31, 0.92);
+      --border: rgba(255,255,255,0.1);
+      --text: #f5f7ff;
+      --muted: #97a0c3;
+      --muted-strong: #c6ccef;
+      --brand: #7c8cff;
+      --brand-2: #4de2c5;
+      --accent: #8f5cff;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --container: 1240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,140,255,0.22), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(77,226,197,0.16), transparent 25%),
+        linear-gradient(180deg, #070b1b 0%, #050816 45%, #040611 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      opacity: 0.45;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button, input { font: inherit; }
+
+    .container {
+      width: min(var(--container), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .site-shell {
+      padding: 28px 0 72px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.16);
+      position: sticky;
+      top: 18px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 30px rgba(124,140,255,0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-copy { min-width: 0; }
+    .brand-copy strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+    .brand-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .hero {
+      margin-top: 26px;
+      padding: 42px;
+      border-radius: calc(var(--radius-xl) + 8px);
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.18), rgba(255,255,255,0.04) 42%, rgba(77,226,197,0.12)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+      gap: 28px;
+      align-items: stretch;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,140,255,0.35), transparent 65%);
+      right: -140px;
+      top: -140px;
+      pointer-events: none;
+    }
+
+    .hero-copy,
+    .hero-side {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbe1ff;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.6rem, 5vw, 5.6rem);
+      line-height: 0.96;
+      letter-spacing: -0.06em;
+      max-width: 10ch;
+      margin-bottom: 18px;
+    }
+
+    .hero p {
+      max-width: 62ch;
+      color: var(--muted-strong);
+      font-size: 1.04rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: transform .2s ease, border-color .2s ease, background .2s ease, box-shadow .2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand), #93a0ff);
+      color: white;
+      box-shadow: 0 10px 30px rgba(124,140,255,0.3);
+      border-color: rgba(255,255,255,0.16);
+    }
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .stat-card,
+    .mini-card,
+    .control-panel,
+    .article-card,
+    .pagination-shell,
+    .empty-state {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card {
+      padding: 22px;
+    }
+
+    .stat-card small,
+    .mini-card small,
+    .control-head p,
+    .section-copy p,
+    .article-summary,
+    .meta-inline,
+    .empty-state p,
+    .loading,
+    .page-stats,
+    .category-hint,
+    .search-hint {
+      color: var(--muted);
+    }
+
+    .stat-value {
+      font-size: clamp(2rem, 3vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
+      margin: 8px 0;
+      font-weight: 700;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .mini-card {
+      padding: 18px;
+    }
+
+    .mini-card strong {
+      display: block;
+      font-size: 1.25rem;
+      margin-top: 8px;
+      letter-spacing: -0.04em;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+      margin-top: 28px;
+    }
+
+    .control-panel {
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .control-panel::before {
+      content: '';
+      position: absolute;
+      inset: auto -50px -80px auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(143,92,255,0.16), transparent 70%);
+      pointer-events: none;
+    }
+
+    .control-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    .control-head h2,
+    .section-copy h2 {
+      font-size: clamp(1.45rem, 2vw, 2rem);
+      letter-spacing: -0.04em;
+      margin-bottom: 4px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .search-label,
+    .category-label {
+      font-size: 0.92rem;
+      color: var(--muted-strong);
+    }
+
+    .search-input-wrap {
+      position: relative;
+    }
+
+    .search-input-wrap input {
+      width: 100%;
+      min-height: 54px;
+      padding: 0 18px 0 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+
+    .search-input-wrap input::placeholder { color: #8d96bb; }
+    .search-input-wrap input:focus {
+      border-color: rgba(124,140,255,0.65);
+      box-shadow: 0 0 0 4px rgba(124,140,255,0.16);
+      background: rgba(255,255,255,0.07);
+    }
+
+    .search-input-wrap span {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.05rem;
+      opacity: 0.78;
+    }
+
+    .category-filter {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .category-btn {
+      appearance: none;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      color: var(--muted-strong);
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+
+    .category-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.14);
+      color: white;
+    }
+
+    .category-btn.active {
+      color: white;
+      background: linear-gradient(135deg, rgba(124,140,255,0.9), rgba(143,92,255,0.9));
+      border-color: transparent;
+      box-shadow: 0 12px 24px rgba(124,140,255,0.25);
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 18px;
+      margin-top: 6px;
+    }
+
+    .section-copy h2 { margin-bottom: 8px; }
+
+    .page-stats {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      text-align: right;
+      font-size: 0.95rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      box-shadow: 0 0 16px rgba(77,226,197,0.55);
+    }
+
+    .loading {
+      padding: 24px 4px 0;
+      font-size: 0.98rem;
+    }
+
+    .article-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 18px;
+    }
+
+    .article-card {
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform .24s ease, border-color .24s ease, box-shadow .24s ease, background .24s ease;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .article-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(124,140,255,0.35);
+      box-shadow: 0 26px 70px rgba(0,0,0,0.35), 0 0 0 1px rgba(124,140,255,0.14) inset;
+      background: var(--panel-strong);
+    }
+
+    .article-cover {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.45), rgba(77,226,197,0.22)),
+        linear-gradient(120deg, #1b2040, #0a1022);
+      display: block;
+    }
+
+    .article-content {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      padding: 20px;
+      height: 100%;
+    }
+
+    .article-topline {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .article-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      background: rgba(124,140,255,0.12);
+      border: 1px solid rgba(124,140,255,0.18);
+      color: #dde2ff;
+      font-size: 0.86rem;
+    }
+
+    .article-id {
+      font-size: 0.84rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .article-title {
+      font-size: 1.32rem;
+      line-height: 1.18;
+      letter-spacing: -0.04em;
+      margin: 0;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .article-summary {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: calc(1.6em * 3);
+    }
+
+    .article-footer {
+      margin-top: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-top: 6px;
+    }
+
+    .meta-inline {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 0.93rem;
+    }
+
+    .meta-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .article-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #dfe4ff;
+      font-weight: 500;
+    }
+
+    .pagination-shell {
+      margin-top: 22px;
+      padding: 18px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 82px;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .page-btn,
+    .page-dots {
+      min-width: 44px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      padding: 0 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
+      color: var(--muted-strong);
+    }
+
+    .page-btn {
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      color: white;
+      border-color: rgba(124,140,255,0.35);
+      background: rgba(124,140,255,0.14);
+    }
+
+    .page-btn.active {
+      background: linear-gradient(135deg, rgba(124,140,255,0.92), rgba(143,92,255,0.92));
+      color: white;
+      border-color: transparent;
+      box-shadow: 0 12px 24px rgba(124,140,255,0.22);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .empty-state {
+      margin-top: 20px;
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .empty-state strong {
+      display: block;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      margin-top: 26px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 1024px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 30px;
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-head,
+      .control-head {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .page-stats { justify-content: flex-start; text-align: left; }
+    }
+
+    @media (max-width: 720px) {
+      .site-shell { padding-top: 18px; }
+
+      .topbar {
+        border-radius: 24px;
+        align-items: flex-start;
+      }
+
+      .topbar,
+      .topbar-meta {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .hero,
+      .control-panel,
+      .pagination-shell,
+      .article-card,
+      .stat-card,
+      .mini-card,
+      .empty-state {
+        border-radius: 20px;
+      }
+
+      .hero {
+        padding: 24px;
+      }
+
+      .article-list {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .page-btn {
+        min-width: 40px;
+        min-height: 40px;
+      }
     }
   </style>
 </head>
 <body>
-  <header>
+  <div class="site-shell">
     <div class="container">
-      <h1>Alexcld</h1>
-      <p class="subtitle">children don't lie</p>
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">A</div>
+          <div class="brand-copy">
+            <strong>Alexcld</strong>
+            <span>children don't lie · 技术博客母舰已升空</span>
+          </div>
+        </div>
+        <div class="topbar-meta">
+          <span class="pill">技术记录 / 运维 / 开发</span>
+          <span class="pill" id="hero-live-pill">文章加载中…</span>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">✦ 个人技术博客 · 持续更新中</div>
+          <h1>把零碎经验，炼成能复用的战斗力。</h1>
+          <p>
+            这里收录运维踩坑、开发实战、Kubernetes 折腾日记，以及那些“今天不记下来，明天又得重新掉坑里”的瞬间。
+            你负责灵感，我负责把内容排成更好看的样子。
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#articles-section">开始逛文章</a>
+            <a class="btn btn-secondary" href="/archives/">查看归档</a>
+          </div>
+        </div>
+        <div class="hero-side">
+          <article class="stat-card">
+            <small>首页状态</small>
+            <div class="stat-value" id="hero-total-count">--</div>
+            <p id="hero-stat-copy" class="search-hint">正在从内容仓库抓取最新文章，请稍候。</p>
+          </article>
+          <div class="mini-grid">
+            <article class="mini-card">
+              <small>当前筛选</small>
+              <strong id="hero-current-filter">全部文章</strong>
+            </article>
+            <article class="mini-card">
+              <small>当前页码</small>
+              <strong id="hero-current-page">Page 1</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <main class="main-grid">
+        <section class="control-panel">
+          <div class="control-head">
+            <div>
+              <h2>筛选与检索</h2>
+              <p>保留原有搜索、分类、分页逻辑，只是把颜值从“能用”升级到“想用”。</p>
+            </div>
+            <div class="page-stats">
+              <span class="dot"></span>
+              <span id="results-summary">准备读取文章数据…</span>
+            </div>
+          </div>
+
+          <div class="control-grid">
+            <div class="search-box">
+              <label class="search-label" for="search-input">标题搜索</label>
+              <div class="search-input-wrap">
+                <span>⌕</span>
+                <input type="text" id="search-input" placeholder="输入关键词，比如：K3s / Grafana / Oracle / Docker">
+              </div>
+              <div class="search-hint">搜索会同步写入 URL，刷新页面也不会丢。</div>
+            </div>
+
+            <div class="search-box">
+              <div class="category-label">分类过滤</div>
+              <div class="category-filter">
+                <button class="category-btn active" data-id="0">全部</button>
+                <div id="category-list" class="category-filter"></div>
+              </div>
+              <div class="category-hint">点击分类即时过滤，并保留当前浏览状态。</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="articles-section">
+          <div class="section-head">
+            <div class="section-copy">
+              <h2>最新文章</h2>
+              <p>按接口返回动态渲染，卡片点击仍会保留来源参数，返回列表不迷路。</p>
+            </div>
+            <div class="page-stats" id="page-stats"></div>
+          </div>
+
+          <div id="loading" class="loading">内容调度中，请稍等片刻…</div>
+          <div id="article-list" class="article-list"></div>
+          <div class="empty-state" id="empty-state" hidden>
+            <strong>这次筛选没有命中文章</strong>
+            <p>试试更短的关键词，或者切换到“全部分类”看看～</p>
+          </div>
+          <div class="pagination-shell">
+            <div id="pagination" class="pagination"></div>
+          </div>
+        </section>
+      </main>
+
+      <div class="footer-note">Built for reading comfort · API-driven · UI upgraded without blowing up the engine ✨</div>
     </div>
-  </header>
-  
-  <main class="container">
-    <div class="filter-bar">
-      <div class="search-box">
-        <input type="text" id="search-input" placeholder="🔍 搜索文章标题...">
-      </div>
-      <div class="category-filter">
-        <span>分类：</span>
-        <button class="category-btn active" data-id="0">全部</button>
-        <div id="category-list"></div>
-      </div>
-    </div>
-    
-    <div id="loading" class="loading">加载中...</div>
-    <div id="article-list" class="article-list"></div>
-    <div id="pagination" class="pagination"></div>
-  </main>
-  
+  </div>
+
+  <script src="/js/config.js"></script>
   <script>
-    const API = 'http://172.28.74.191:30083/api';
-    let currentPage = 1, currentCategory = 0, searchKeyword = '';
-    
+    const API = window.getApiBase();
+    const params = new URLSearchParams(window.location.search);
+    let currentPage = Number(params.get('page') || 1);
+    let currentCategory = Number(params.get('category_id') || 0);
+    let searchKeyword = params.get('search') || '';
+    let currentTag = params.get('tag') || '';
+    let categoryMap = new Map();
+    let lastTotal = 0;
+
+    if (currentPage < 1) currentPage = 1;
+    document.getElementById('search-input').value = searchKeyword;
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatDate(value) {
+      if (!value) return '暂无日期';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '暂无日期';
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    }
+
+    function getCategoryName() {
+      if (currentTag) return '#' + currentTag;
+      if (currentCategory === 0) return '全部文章';
+      return categoryMap.get(currentCategory) || '当前分类';
+    }
+
+    function updateHeroMeta(page = currentPage, total = lastTotal) {
+      document.getElementById('hero-current-page').textContent = `Page ${page}`;
+      document.getElementById('hero-current-filter').textContent = getCategoryName();
+      document.getElementById('hero-total-count').textContent = total;
+      document.getElementById('hero-live-pill').textContent = total > 0 ? `共 ${total} 篇内容在线` : '等待文章上线';
+      document.getElementById('hero-stat-copy').textContent = total > 0
+        ? `当前正在展示「${getCategoryName()}」相关内容，UI 已升级，内容引擎照常运转。`
+        : '暂未获取到文章数据，请检查筛选条件或接口状态。';
+    }
+
+    function updateResultSummary(page, total, pageSize, listLength) {
+      const totalPages = Math.max(1, Math.ceil((total || 0) / (pageSize || 10)));
+      const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+      const end = total === 0 ? 0 : start + listLength - 1;
+      const summary = total === 0
+        ? '当前没有可显示的文章'
+        : `显示第 ${start}-${end} 篇，共 ${total} 篇 · 第 ${page}/${totalPages} 页`;
+      document.getElementById('results-summary').textContent = summary;
+      document.getElementById('page-stats').innerHTML = total === 0
+        ? '<span>暂无数据</span>'
+        : `<span class="dot"></span><span>${getCategoryName()}</span><span>·</span><span>${total} 篇文章</span>`;
+      updateHeroMeta(page, total);
+    }
+
     async function loadCategories() {
       const res = await fetch(`${API}/categories`);
       const json = await res.json();
       const list = document.getElementById('category-list');
-      json.data.forEach(cat => {
+      list.innerHTML = '';
+
+      (json.data || []).forEach(cat => {
+        categoryMap.set(cat.id, cat.name);
         const btn = document.createElement('button');
         btn.className = 'category-btn';
         btn.textContent = cat.name;
@@ -86,106 +883,178 @@
         btn.onclick = () => filterByCategory(cat.id);
         list.appendChild(btn);
       });
+
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.classList.toggle('active', Number(btn.dataset.id) === currentCategory);
+      });
+
+      updateHeroMeta();
     }
-    
+
     function filterByCategory(id) {
       currentCategory = id;
+      currentTag = '';
       currentPage = 1;
       document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.id == id);
+        btn.classList.toggle('active', Number(btn.dataset.id) === id);
       });
       loadArticles();
     }
-    
+
+    let searchDebounce;
     document.getElementById('search-input').addEventListener('input', (e) => {
       searchKeyword = e.target.value.trim();
       currentPage = 1;
-      loadArticles();
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => loadArticles(), 220);
     });
-    
+
+    function syncQueryString() {
+      const next = new URLSearchParams();
+      if (currentPage > 1) next.set('page', String(currentPage));
+      if (currentCategory > 0) next.set('category_id', String(currentCategory));
+      if (searchKeyword) next.set('search', searchKeyword);
+      if (currentTag) next.set('tag', currentTag);
+      const query = next.toString();
+      const url = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+      window.history.replaceState({}, '', url);
+      return query;
+    }
+
+    function buildPostUrl(article) {
+      const query = syncQueryString();
+      return query
+        ? `/post.html?id=${article.id}&from=${encodeURIComponent(`/?${query}`)}`
+        : `/post.html?id=${article.id}`;
+    }
+
     async function loadArticles() {
+      const loadingEl = document.getElementById('loading');
+      const listEl = document.getElementById('article-list');
+      const emptyEl = document.getElementById('empty-state');
+      const paginationEl = document.getElementById('pagination');
+
       try {
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('article-list').innerHTML = '';
-        
-        let url = `${API}/articles?page=${currentPage}&pageSize=10`;
+        loadingEl.style.display = 'block';
+        loadingEl.textContent = '内容调度中，请稍等片刻…';
+        listEl.innerHTML = '';
+        paginationEl.innerHTML = '';
+        emptyEl.hidden = true;
+
+        let url = `${API}/articles?page=${currentPage}&page_size=10`;
         if (currentCategory > 0) url += `&category_id=${currentCategory}`;
         if (searchKeyword) url += `&search=${encodeURIComponent(searchKeyword)}`;
-        
+        if (currentTag) url += `&tag=${encodeURIComponent(currentTag)}`;
+
         const res = await fetch(url);
         const json = await res.json();
-        
-        document.getElementById('loading').style.display = 'none';
-        
-        if (json.data && json.data.length > 0) {
-          renderArticles(json.data);
-          renderPagination(json.page, json.total, json.page_size);
+        const articles = json.data || [];
+        lastTotal = json.total || 0;
+
+        loadingEl.style.display = 'none';
+        syncQueryString();
+        updateResultSummary(json.page || currentPage, json.total || 0, json.page_size || 10, articles.length);
+
+        if (articles.length > 0) {
+          renderArticles(articles);
+          renderPagination(json.page || currentPage, json.total || 0, json.page_size || 10);
         } else {
-          document.getElementById('article-list').innerHTML = '<p class="loading">暂无文章</p>';
+          emptyEl.hidden = false;
         }
       } catch (error) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('article-list').innerHTML = '<p class="loading">加载失败</p>';
+        console.error('加载文章失败:', error);
+        loadingEl.style.display = 'block';
+        loadingEl.textContent = '加载失败，请稍后重试。';
+        listEl.innerHTML = '';
+        document.getElementById('empty-state').hidden = true;
+        document.getElementById('results-summary').textContent = '文章数据加载失败';
+        document.getElementById('page-stats').innerHTML = '<span>接口暂时开小差了</span>';
+        document.getElementById('hero-live-pill').textContent = '接口连接异常';
+        document.getElementById('hero-stat-copy').textContent = '文章内容暂时没有成功返回，稍后再试试。';
       }
     }
-    
+
     function renderArticles(articles) {
       const listEl = document.getElementById('article-list');
+      listEl.innerHTML = '';
+
       articles.forEach(article => {
-        const card = document.createElement('div');
+        const card = document.createElement('article');
         card.className = 'article-card';
-        card.onclick = () => window.location.href = `/post.html?id=${article.id}`;
+        card.onclick = () => window.location.href = buildPostUrl(article);
+
+        const title = escapeHtml(article.title || '未命名文章');
+        const summaryRaw = article.summary || article.content || '作者很神秘，暂时没有留下摘要。';
+        const summary = escapeHtml(String(summaryRaw).replace(/<[^>]+>/g, '').trim()).slice(0, 160);
+        const cover = article.cover_image
+          ? `<img class="article-cover" src="${escapeHtml(article.cover_image)}" alt="${title}">`
+          : '<div class="article-cover"></div>';
+        const category = article.category?.name
+          ? `<span class="article-category">${escapeHtml(article.category.name)}</span>`
+          : '<span class="article-category">未分类</span>';
+
         card.innerHTML = `
-          ${article.cover_image ? `<img class="article-cover" src="${article.cover_image}" alt="${article.title}">` : '<div class="article-cover"></div>'}
+          ${cover}
           <div class="article-content">
-            <h2 class="article-title">${article.title}</h2>
-            ${article.summary ? `<p class="article-summary">${article.summary}</p>` : ''}
-            <div class="article-meta">
-              <span>👁️ ${article.views || 0} 次阅读</span>
-              ${article.category ? `<span class="article-category">${article.category.name}</span>` : ''}
+            <div class="article-topline">
+              ${category}
+              <span class="article-id">Post #${article.id ?? '--'}</span>
+            </div>
+            <h3 class="article-title">${title}</h3>
+            <p class="article-summary">${summary || '暂无摘要'}</p>
+            <div class="article-footer">
+              <div class="meta-inline">
+                <span class="meta-chip">👁️ ${article.views || 0} 阅读</span>
+                <span class="meta-chip">🗓️ ${formatDate(article.created_at)}</span>
+              </div>
+              <span class="article-link">阅读全文 →</span>
             </div>
           </div>
         `;
+
         listEl.appendChild(card);
       });
     }
-    
+
     function renderPagination(page, total, pageSize) {
       const totalPages = Math.ceil(total / pageSize);
       const paginationEl = document.getElementById('pagination');
       paginationEl.innerHTML = '';
       if (totalPages <= 1) return;
-      
-      const prevBtn = document.createElement('button');
-      prevBtn.className = 'page-btn';
-      prevBtn.textContent = '上一页';
-      prevBtn.disabled = page === 1;
-      prevBtn.onclick = () => { currentPage = page - 1; loadArticles(); };
-      paginationEl.appendChild(prevBtn);
-      
+
+      const addButton = (label, targetPage, disabled = false, active = false) => {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn' + (active ? ' active' : '');
+        btn.textContent = label;
+        btn.disabled = disabled;
+        btn.onclick = () => {
+          currentPage = targetPage;
+          loadArticles();
+        };
+        paginationEl.appendChild(btn);
+      };
+
+      const addDots = () => {
+        const dots = document.createElement('span');
+        dots.className = 'page-dots';
+        dots.textContent = '...';
+        paginationEl.appendChild(dots);
+      };
+
+      addButton('上一页', page - 1, page === 1);
+
+      let lastRendered = 0;
       for (let i = 1; i <= totalPages; i++) {
-        if (i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2)) {
-          const pageBtn = document.createElement('button');
-          pageBtn.className = 'page-btn' + (i === page ? ' active' : '');
-          pageBtn.textContent = i;
-          pageBtn.onclick = () => { currentPage = i; loadArticles(); };
-          paginationEl.appendChild(pageBtn);
-        } else if (i === page - 3 || i === page + 3) {
-          const dots = document.createElement('span');
-          dots.textContent = '...';
-          dots.style.padding = '0.5rem';
-          paginationEl.appendChild(dots);
-        }
+        const shouldRender = i === 1 || i === totalPages || (i >= page - 2 && i <= page + 2);
+        if (!shouldRender) continue;
+        if (lastRendered && i - lastRendered > 1) addDots();
+        addButton(String(i), i, false, i === page);
+        lastRendered = i;
       }
-      
-      const nextBtn = document.createElement('button');
-      nextBtn.className = 'page-btn';
-      nextBtn.textContent = '下一页';
-      nextBtn.disabled = page === totalPages;
-      nextBtn.onclick = () => { currentPage = page + 1; loadArticles(); };
-      paginationEl.appendChild(nextBtn);
+
+      addButton('下一页', page + 1, page === totalPages);
     }
-    
+
     loadCategories();
     loadArticles();
   </script>
