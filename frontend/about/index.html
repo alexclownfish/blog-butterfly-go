@@ -132,6 +132,65 @@
       white-space: nowrap;
     }
 
+    .nav-dropdown {
+      position: relative;
+    }
+
+    .nav-dropdown summary {
+      list-style: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+
+    .nav-dropdown summary::-webkit-details-marker { display: none; }
+
+    .nav-dropdown[open] summary {
+      color: white;
+      border-color: rgba(124,140,255,0.35);
+      background: rgba(124,140,255,0.14);
+    }
+
+    .nav-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      min-width: 190px;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8, 12, 28, 0.96);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.32);
+      backdrop-filter: blur(18px);
+      display: grid;
+      gap: 6px;
+      z-index: 40;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      color: var(--muted-strong);
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .nav-link:hover {
+      color: white;
+      background: rgba(124,140,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .nav-link small {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
     .hero {
       margin-top: 26px;
       padding: 42px;
@@ -454,14 +513,23 @@
         <a class="brand" href="/">
           <div class="brand-mark">A</div>
           <div class="brand-copy">
-            <strong>Alexcld</strong>
-            <span>children don't lie · This is AKA Alex</span>
+            <strong>children don't lie</strong>
+            <span>导航 / 技术记录 / 运维 / 开发</span>
           </div>
         </a>
         <div class="topbar-meta">
-          <a class="pill" href="/">首页</a>
-          <a class="pill" href="/archives/">归档</a>
-          <a class="pill" href="/categories/">分类</a>
+          <details class="nav-dropdown">
+            <summary class="pill">导航 <span>▾</span></summary>
+            <div class="nav-menu">
+              <a class="nav-link" href="/"><span>首页</span><small>Home</small></a>
+              <a class="nav-link" href="/categories/"><span>分类</span><small>Categories</small></a>
+              <a class="nav-link" href="/archives/"><span>归档</span><small>Archives</small></a>
+              <a class="nav-link" href="/about/"><span>博主</span><small>About</small></a>
+            </div>
+          </details>
+          <span class="pill">技术记录</span>
+          <span class="pill">运维</span>
+          <span class="pill">开发</span>
           <span class="pill">关于页已就绪</span>
         </div>
       </header>
