@@ -8,8 +8,13 @@ let articleFilters = {
 };
 let articleCategories = [];
 let imageCache = null;
-let currentPage = 1;
-const pageSize = 20;
+let articlePagination = {
+  page: 1,
+  pageSize: 10,
+  total: 0
+};
+let currentImagePage = 1;
+const imagePageSize = 20;
 let selectedImages = [];
 
 function getCoverInput() {
@@ -172,8 +177,32 @@ function buildArticleQuery() {
   if (articleFilters.status) params.set('status', articleFilters.status);
   if (articleFilters.search) params.set('search', articleFilters.search);
   if (articleFilters.categoryId) params.set('category_id', articleFilters.categoryId);
+  params.set('page', String(articlePagination.page));
+  params.set('page_size', String(articlePagination.pageSize));
   const query = params.toString();
   return query ? `?${query}` : '';
+}
+
+async function loadDashboardStats() {
+  const articleTotal = document.getElementById('dashboard-article-total');
+  const publishedTotal = document.getElementById('dashboard-published-total');
+  const categoryImageTotal = document.getElementById('dashboard-category-image-total');
+  if (!articleTotal || !publishedTotal || !categoryImageTotal || !token) return;
+
+  try {
+    const json = await requestJson(`${API}/dashboard/stats`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const stats = json.data || {};
+    articleTotal.textContent = String(stats.article_total ?? 0);
+    publishedTotal.textContent = `${stats.published_total ?? 0} / ${stats.draft_total ?? 0}`;
+    categoryImageTotal.textContent = `${stats.category_total ?? 0} / ${stats.image_total ?? 0}`;
+  } catch (error) {
+    articleTotal.textContent = '--';
+    publishedTotal.textContent = '-- / --';
+    categoryImageTotal.textContent = '-- / --';
+    console.warn('loadDashboardStats failed', error);
+  }
 }
 
 function renderStateCard(message, type = 'info') {
@@ -247,6 +276,7 @@ function loadArticlesPage() {
       </div>
 
       <div id="article-list" class="article-list"></div>
+      <div id="article-pagination"></div>
     </section>
   `;
 
@@ -262,6 +292,7 @@ function applyArticleFilters() {
   articleFilters.status = document.getElementById('articleStatusFilter').value;
   articleFilters.categoryId = document.getElementById('articleCategoryFilter').value;
   articleFilters.search = document.getElementById('articleSearchInput').value.trim();
+  articlePagination.page = 1;
   clearFeedback();
   renderArticlesLoading('正在应用筛选条件...');
   loadArticles();
@@ -269,11 +300,39 @@ function applyArticleFilters() {
 
 function resetArticleFilters() {
   articleFilters = { status: '', search: '', categoryId: '' };
+  articlePagination.page = 1;
   document.getElementById('articleStatusFilter').value = '';
   document.getElementById('articleCategoryFilter').value = '';
   document.getElementById('articleSearchInput').value = '';
   clearFeedback();
   renderArticlesLoading('正在重置筛选条件...');
+  loadArticles();
+}
+
+function renderArticlePagination() {
+  const container = document.getElementById('article-pagination');
+  if (!container) return;
+
+  const totalPages = Math.max(1, Math.ceil((articlePagination.total || 0) / articlePagination.pageSize));
+  if ((articlePagination.total || 0) <= articlePagination.pageSize) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pagination article-pagination">
+      <button class="btn" onclick="changeArticlePage(${articlePagination.page - 1})" ${articlePagination.page <= 1 ? 'disabled' : ''}>上一页</button>
+      <span>第 ${articlePagination.page} / ${totalPages} 页 · 共 ${articlePagination.total} 篇</span>
+      <button class="btn" onclick="changeArticlePage(${articlePagination.page + 1})" ${articlePagination.page >= totalPages ? 'disabled' : ''}>下一页</button>
+    </div>
+  `;
+}
+
+function changeArticlePage(page) {
+  const totalPages = Math.max(1, Math.ceil((articlePagination.total || 0) / articlePagination.pageSize));
+  if (page < 1 || page > totalPages) return;
+  articlePagination.page = page;
+  renderArticlesLoading('正在切换页码...');
   loadArticles();
 }
 
@@ -287,9 +346,13 @@ async function loadArticles() {
     }
     const json = await requestJson(`${API}/articles${buildArticleQuery()}`);
     const articles = Array.isArray(json.data) ? json.data : [];
+    articlePagination.total = Number(json.total || 0);
+    articlePagination.page = Number(json.page || articlePagination.page || 1);
+    articlePagination.pageSize = Number(json.page_size || articlePagination.pageSize || 10);
     list.innerHTML = '';
 
     if (!articles.length) {
+      renderArticlePagination();
       list.innerHTML = renderStateCard('这里暂时没有符合条件的文章，像冰箱里只剩下一根葱。', 'empty');
       return;
     }
@@ -339,7 +402,11 @@ async function loadArticles() {
       `;
       list.appendChild(div);
     });
+
+    renderArticlePagination();
   } catch (error) {
+    const pagination = document.getElementById('article-pagination');
+    if (pagination) pagination.innerHTML = '';
     list.innerHTML = renderStateCard(`加载文章失败：${error.message}`, 'error');
     showFeedback(`加载文章失败：${error.message}`, 'error');
   }
@@ -499,6 +566,8 @@ function loadCategoriesPage() {
         </div>
       </div>
 
+      <div id="page-feedback" class="feedback-banner" style="display:none;"></div>
+
       <div class="category-toolbar">
         <label class="field compact-field grow">
           <span>新分类名称</span>
@@ -532,16 +601,20 @@ async function loadCategories() {
       const div = document.createElement('div');
       div.className = 'category-card';
       div.innerHTML = `
-        <div>
+        <div class="category-card-main">
           <small>Category</small>
           <strong>${escapeHtml(cat.name)}</strong>
         </div>
-        <button class="btn btn-danger" onclick="deleteCat(${cat.id})">删除</button>
+        <div class="category-card-actions">
+          <button class="btn" onclick="renameCategory(${cat.id}, '${escapeHtml(cat.name).replace(/'/g, '&#39;')}')">重命名</button>
+          <button class="btn btn-danger" onclick="deleteCat(${cat.id})">删除</button>
+        </div>
       `;
       list.appendChild(div);
     });
   } catch (error) {
     list.innerHTML = renderStateCard(`加载分类失败：${error.message}`, 'error');
+    showFeedback(`加载分类失败：${error.message}`, 'error');
   }
 }
 
@@ -549,11 +622,12 @@ async function addCategory() {
   const input = document.getElementById('newCat');
   const name = input.value.trim();
   if (!name) {
-    alert('请输入分类名称');
+    showFeedback('请输入分类名称', 'error');
     return;
   }
 
   try {
+    showFeedback('正在添加分类...', 'info');
     await requestJson(`${API}/categories`, {
       method: 'POST',
       headers: {
@@ -565,22 +639,57 @@ async function addCategory() {
     input.value = '';
     articleCategories = [];
     await loadCategories();
+    await loadDashboardStats();
+    showFeedback('分类添加成功', 'success');
   } catch (error) {
-    alert(`添加分类失败：${error.message}`);
+    showFeedback(`添加分类失败：${error.message}`, 'error');
+  }
+}
+
+async function renameCategory(id, currentName) {
+  const nextName = prompt('请输入新的分类名称：', currentName || '');
+  if (nextName === null) return;
+
+  const name = nextName.trim();
+  if (!name) {
+    showFeedback('分类名称不能为空', 'error');
+    return;
+  }
+
+  try {
+    showFeedback('正在重命名分类...', 'info');
+    await requestJson(`${API}/categories/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name })
+    });
+    articleCategories = [];
+    await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
+    await loadDashboardStats();
+    showFeedback('分类重命名成功', 'success');
+  } catch (error) {
+    showFeedback(`分类重命名失败：${error.message}`, 'error');
   }
 }
 
 async function deleteCat(id) {
   if (!confirm('确定删除这个分类吗？')) return;
   try {
+    showFeedback('正在删除分类...', 'info');
     await requestJson(`${API}/categories/${id}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
     articleCategories = [];
     await loadCategories();
+    await loadDashboardStats();
+    showFeedback('分类删除成功', 'success');
   } catch (error) {
-    alert(`删除分类失败：${error.message}`);
+    showFeedback(`删除分类失败：${error.message}`, 'error');
   }
 }
 
@@ -608,9 +717,9 @@ function loadImageHistory() {
 }
 
 function changePage(page) {
-  const total = Math.ceil(imageCache.length / pageSize);
+  const total = Math.ceil(imageCache.length / imagePageSize);
   if (page < 1 || page > total) return;
-  currentPage = page;
+  currentImagePage = page;
   renderImages();
 }
 
@@ -726,16 +835,16 @@ function renderImages() {
   if (!list) return;
 
   const allImages = Array.isArray(imageCache) ? imageCache : [];
-  const total = Math.ceil(allImages.length / pageSize) || 1;
-  if (currentPage > total) currentPage = total;
+  const total = Math.ceil(allImages.length / imagePageSize) || 1;
+  if (currentImagePage > total) currentImagePage = total;
 
   if (!allImages.length) {
     list.innerHTML = renderStateCard('图片库还是空的，连一张表情包都没有。', 'empty');
     return;
   }
 
-  const start = (currentPage - 1) * pageSize;
-  const end = start + pageSize;
+  const start = (currentImagePage - 1) * imagePageSize;
+  const end = start + imagePageSize;
   const pageData = allImages.slice(start, end);
 
   list.innerHTML = `
@@ -776,9 +885,9 @@ function renderImages() {
     const pagination = document.createElement('div');
     pagination.className = 'pagination';
     pagination.innerHTML = `
-      <button class="btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>上一页</button>
-      <span>第 ${currentPage} / ${total} 页</span>
-      <button class="btn" onclick="changePage(${currentPage + 1})" ${currentPage === total ? 'disabled' : ''}>下一页</button>
+      <button class="btn" onclick="changePage(${currentImagePage - 1})" ${currentImagePage === 1 ? 'disabled' : ''}>上一页</button>
+      <span>第 ${currentImagePage} / ${total} 页</span>
+      <button class="btn" onclick="changePage(${currentImagePage + 1})" ${currentImagePage === total ? 'disabled' : ''}>下一页</button>
     `;
     list.appendChild(pagination);
   }
@@ -793,11 +902,12 @@ function copyUrl(url) {
   textarea.select();
   try {
     document.execCommand('copy');
-    alert('已复制');
+    showFeedback('链接已复制，可以快乐贴图了 ✨', 'success');
   } catch (err) {
-    alert('复制失败');
+    showFeedback('复制失败，请手动复制链接', 'error');
   }
   document.body.removeChild(textarea);
 }
 
+loadDashboardStats();
 loadArticlesPage();

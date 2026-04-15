@@ -856,6 +856,16 @@ img {
   flex-wrap: wrap;
 }
 
+.category-card-main {
+  min-width: 0;
+}
+
+.category-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .category-card small {
   display: block;
   color: var(--muted);
@@ -1011,14 +1021,18 @@ img {
 .pagination {
   margin-top: 20px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .pagination span {
   color: var(--muted-strong);
+}
+
+.article-pagination {
+  margin-top: 18px;
 }
 
 @media (max-width: 1100px) {
