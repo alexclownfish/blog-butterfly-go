@@ -16,6 +16,22 @@ let articlePagination = {
 let currentImagePage = 1;
 const imagePageSize = 20;
 let selectedImages = [];
+let markdownEditor = null;
+let autosaveTimer = null;
+let editorDirty = false;
+let isSavingArticle = false;
+let imagePickerMode = null;
+let suppressAutosave = false;
+let currentEditorDraftKey = null;
+
+const AUTOSAVE_DELAY = 2000;
+const DRAFT_KEY_NEW = 'admin:draft:new';
+const SAVE_STATES = {
+  idle: { text: '未保存', className: 'info' },
+  savingLocal: { text: '正在自动保存到本地...', className: 'info' },
+  saveFailed: { text: '自动保存失败', className: 'error' },
+  savedRemote: { text: '已保存到服务器', className: 'success' }
+};
 
 function getCoverInput() {
   return document.getElementById('editCover');
@@ -25,8 +41,62 @@ function getCoverPreview() {
   return document.getElementById('coverPreview');
 }
 
+function getEditorModal() {
+  return document.getElementById('editorModal');
+}
+
+function getImagePickerModal() {
+  return document.getElementById('imagePickerModal');
+}
+
+function getSaveStateElement() {
+  return document.getElementById('editorSaveState');
+}
+
+function getEditorStatsElement() {
+  return document.getElementById('editorStats');
+}
+
+function getEditorModeHintElement() {
+  return document.getElementById('editorModeHint');
+}
+
+function setEditorModeHint(text) {
+  const element = getEditorModeHintElement();
+  if (element) element.textContent = text;
+}
+
+function setEditorSaveState(key, customText = '') {
+  const element = getSaveStateElement();
+  if (!element) return;
+
+  const preset = SAVE_STATES[key] || SAVE_STATES.idle;
+  element.className = `editor-status-chip ${preset.className}`;
+  element.textContent = customText || preset.text;
+}
+
+function formatTimeLabel(date = new Date()) {
+  return date.toLocaleTimeString('zh-CN', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+}
+
+function updateEditorStats(content = '') {
+  const element = getEditorStatsElement();
+  if (!element) return;
+
+  const normalized = String(content || '').replace(/\s+/g, ' ').trim();
+  const charCount = normalized ? normalized.length : 0;
+  const readingMinutes = Math.max(1, Math.ceil(charCount / 300));
+  element.textContent = `${charCount} 字 · 预计 ${readingMinutes} 分钟阅读`;
+}
+
 function handleCoverInputChange() {
   renderCoverPreview(getCoverInput()?.value.trim() || '');
+  markEditorDirty();
 }
 
 async function refreshRandomCover() {
@@ -38,6 +108,7 @@ async function refreshRandomCover() {
       return;
     }
     applyCoverValue(randomUrl);
+    markEditorDirty();
     showFeedback('已随机换了一张封面，看看这张顺不顺眼 😎', 'success');
   } catch (error) {
     showFeedback(`随机封面失败：${error.message}`, 'error');
@@ -51,10 +122,12 @@ function pickRandomCoverUrl() {
   return images[index]?.url || '';
 }
 
-function applyCoverValue(url = '') {
+function applyCoverValue(url = '', options = {}) {
+  const { markDirty = false } = options;
   const input = getCoverInput();
   if (input) input.value = url || '';
   renderCoverPreview(url || '');
+  if (markDirty) markEditorDirty();
 }
 
 function renderCoverPreview(url = '') {
@@ -456,29 +529,316 @@ async function loadCategoryOptions(selectedId = '', options = {}) {
   }
 }
 
-async function openEditor(id = null) {
-  editingId = id;
-  clearFeedback();
-  document.getElementById('editorTitle').textContent = id ? '编辑文章' : '新建文章';
-  document.getElementById('editorModal').style.display = 'block';
+function initMarkdownEditor() {
+  const textarea = document.getElementById('editContent');
+  if (!textarea || markdownEditor || typeof EasyMDE === 'undefined') return;
 
+  markdownEditor = new EasyMDE({
+    element: textarea,
+    spellChecker: false,
+    autoDownloadFontAwesome: false,
+    forceSync: true,
+    status: false,
+    renderingConfig: {
+      singleLineBreaks: false,
+      codeSyntaxHighlighting: false
+    },
+    toolbar: [
+      'bold',
+      'italic',
+      'heading',
+      '|',
+      'quote',
+      'unordered-list',
+      'ordered-list',
+      '|',
+      'code',
+      'link',
+      {
+        name: 'image-library',
+        action: () => openImagePicker('markdown'),
+        className: 'fa fa-picture-o',
+        title: '从图床插入图片'
+      },
+      '|',
+      'preview',
+      'side-by-side',
+      'fullscreen'
+    ]
+  });
+
+  markdownEditor.codemirror.on('change', () => {
+    updateEditorStats(getEditorContent());
+    markEditorDirty();
+  });
+}
+
+function destroyMarkdownEditor() {
+  if (!markdownEditor) return;
+  markdownEditor.toTextArea();
+  markdownEditor = null;
+}
+
+function getEditorContent() {
+  if (markdownEditor) return markdownEditor.value();
+  return document.getElementById('editContent')?.value || '';
+}
+
+function setEditorContent(value) {
+  const nextValue = value || '';
+  if (markdownEditor) {
+    markdownEditor.value(nextValue);
+  } else {
+    const textarea = document.getElementById('editContent');
+    if (textarea) textarea.value = nextValue;
+  }
+  updateEditorStats(nextValue);
+}
+
+function insertMarkdownImage(url, altText = '图片描述') {
+  if (!markdownEditor) return;
+  const cm = markdownEditor.codemirror;
+  const doc = cm.getDoc();
+  const text = `![${altText}](${url})`;
+  doc.replaceSelection(text);
+  cm.focus();
+  markEditorDirty();
+}
+
+function openImagePicker(mode) {
+  imagePickerMode = mode;
+  const modal = getImagePickerModal();
+  const tip = document.getElementById('imagePickerModeText');
+  if (tip) {
+    tip.textContent = mode === 'cover'
+      ? '当前操作：选择封面图，点一下就会回填到封面输入框。'
+      : '当前操作：插入正文配图，点一下就会插入到当前光标位置。';
+  }
+
+  if (modal) modal.style.display = 'block';
+
+  ensureImageCache()
+    .then(() => renderImagePicker())
+    .catch((error) => {
+      const grid = document.getElementById('imagePickerGrid');
+      if (grid) grid.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+    });
+}
+
+function closeImagePicker() {
+  imagePickerMode = null;
+  const modal = getImagePickerModal();
+  if (modal) modal.style.display = 'none';
+}
+
+function renderImagePicker() {
+  const grid = document.getElementById('imagePickerGrid');
+  if (!grid) return;
+
+  const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  if (!images.length) {
+    grid.innerHTML = renderStateCard('图床里还没有图片，先去上传两张，再来让编辑器吃饱。', 'empty');
+    return;
+  }
+
+  grid.innerHTML = images.map((item) => `
+    <button type="button" class="image-picker-item" onclick="handleImagePick('${escapeHtml(item.url).replace(/'/g, '&#39;')}')">
+      <img src="${escapeHtml(item.url)}" alt="image option">
+      <span>${escapeHtml(item.url)}</span>
+    </button>
+  `).join('');
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function handleImagePick(rawUrl) {
+  const url = decodeHtmlEntities(rawUrl);
+  if (!url) return;
+
+  if (imagePickerMode === 'cover') {
+    applyCoverValue(url, { markDirty: true });
+  } else if (imagePickerMode === 'markdown') {
+    insertMarkdownImage(url);
+  }
+
+  closeImagePicker();
+}
+
+function getDraftStorageKey() {
+  return editingId ? `admin:draft:article:${editingId}` : DRAFT_KEY_NEW;
+}
+
+function buildEditorSnapshot() {
+  return {
+    title: document.getElementById('editTitle')?.value.trim() || '',
+    summary: document.getElementById('editSummary')?.value.trim() || '',
+    cover_image: document.getElementById('editCover')?.value.trim() || '',
+    category_id: document.getElementById('editCategory')?.value || '',
+    tags: document.getElementById('editTags')?.value.trim() || '',
+    is_top: !!document.getElementById('editIsTop')?.checked,
+    status: document.getElementById('editStatus')?.value || 'draft',
+    content: getEditorContent(),
+    updated_at: new Date().toISOString(),
+    editing_id: editingId || null
+  };
+}
+
+function saveDraftToLocal() {
+  try {
+    const key = getDraftStorageKey();
+    const snapshot = buildEditorSnapshot();
+    localStorage.setItem(key, JSON.stringify(snapshot));
+    currentEditorDraftKey = key;
+    editorDirty = false;
+    setEditorSaveState('idle', `已自动保存到本地 ${formatTimeLabel(new Date(snapshot.updated_at))}`);
+  } catch (error) {
+    console.warn('saveDraftToLocal failed', error);
+    setEditorSaveState('saveFailed');
+  }
+}
+
+function loadDraftFromLocal() {
+  const key = getDraftStorageKey();
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    console.warn('loadDraftFromLocal failed', error);
+    return null;
+  }
+}
+
+function clearDraftFromLocal(key = getDraftStorageKey()) {
+  if (!key) return;
+  localStorage.removeItem(key);
+  if (currentEditorDraftKey === key) {
+    currentEditorDraftKey = null;
+  }
+}
+
+function applySnapshotToEditor(snapshot) {
+  if (!snapshot) return;
+
+  suppressAutosave = true;
+  document.getElementById('editTitle').value = snapshot.title || '';
+  document.getElementById('editSummary').value = snapshot.summary || '';
+  applyCoverValue(snapshot.cover_image || '');
+  document.getElementById('editCategory').value = snapshot.category_id ? String(snapshot.category_id) : '';
+  document.getElementById('editTags').value = snapshot.tags || '';
+  document.getElementById('editIsTop').checked = !!snapshot.is_top;
+  document.getElementById('editStatus').value = snapshot.status || (editingId ? 'published' : 'draft');
+  setEditorContent(snapshot.content || '');
+  suppressAutosave = false;
+}
+
+function queueDraftAutosave() {
+  if (suppressAutosave || !getEditorModal() || getEditorModal().style.display !== 'block') return;
+
+  setEditorSaveState('savingLocal');
+  if (autosaveTimer) window.clearTimeout(autosaveTimer);
+  autosaveTimer = window.setTimeout(() => {
+    saveDraftToLocal();
+    autosaveTimer = null;
+  }, AUTOSAVE_DELAY);
+}
+
+function markEditorDirty() {
+  if (suppressAutosave) return;
+  editorDirty = true;
+  setEditorSaveState('idle');
+  queueDraftAutosave();
+}
+
+function resetEditorFields() {
+  suppressAutosave = true;
   document.getElementById('editTitle').value = '';
   document.getElementById('editSummary').value = '';
   document.getElementById('editCover').value = '';
   document.getElementById('editCategory').value = '';
   document.getElementById('editTags').value = '';
   document.getElementById('editIsTop').checked = false;
-  document.getElementById('editStatus').value = id ? 'published' : 'draft';
-  document.getElementById('editContent').value = '';
+  document.getElementById('editStatus').value = editingId ? 'published' : 'draft';
+  setEditorContent('');
   renderCoverPreview('');
+  suppressAutosave = false;
+}
 
-  await Promise.all([
+function bindEditorFieldListeners() {
+  const fieldIds = ['editTitle', 'editSummary', 'editCategory', 'editTags', 'editStatus'];
+  fieldIds.forEach((id) => {
+    const element = document.getElementById(id);
+    if (!element || element.dataset.autosaveBound === 'true') return;
+    element.addEventListener('input', markEditorDirty);
+    element.addEventListener('change', markEditorDirty);
+    element.dataset.autosaveBound = 'true';
+  });
+
+  const checkbox = document.getElementById('editIsTop');
+  if (checkbox && checkbox.dataset.autosaveBound !== 'true') {
+    checkbox.addEventListener('change', markEditorDirty);
+    checkbox.dataset.autosaveBound = 'true';
+  }
+}
+
+async function maybeRestoreDraft() {
+  const draft = loadDraftFromLocal();
+  if (!draft) return;
+
+  const message = editingId
+    ? `检测到本地草稿（${formatTimeLabel(new Date(draft.updated_at || Date.now()))}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
+    : `检测到未完成的新文章草稿（${formatTimeLabel(new Date(draft.updated_at || Date.now()))}）。\n要恢复它吗？`;
+
+  const shouldRestore = confirm(message);
+  if (shouldRestore) {
+    applySnapshotToEditor(draft);
+    setEditorSaveState('idle', `已恢复本地草稿 ${formatTimeLabel(new Date(draft.updated_at || Date.now()))}`);
+    editorDirty = false;
+  }
+}
+
+// Active mainline editor lives in index.html modal. Legacy editor.html is reference-only.
+async function openEditor(id = null) {
+  editingId = id;
+  currentEditorDraftKey = getDraftStorageKey();
+  clearFeedback();
+  setEditorModeHint(id ? `编辑文章 #${id}` : '新建文章');
+  document.getElementById('editorTitle').textContent = id ? '编辑文章' : '新建文章';
+  getEditorModal().style.display = 'block';
+
+  bindEditorFieldListeners();
+  initMarkdownEditor();
+  resetEditorFields();
+  setEditorSaveState('idle');
+  editorDirty = false;
+
+  const preloadResults = await Promise.allSettled([
     loadCategoryOptions(),
     ensureImageCache()
   ]);
+  const preloadErrors = preloadResults
+    .filter((result) => result.status === 'rejected')
+    .map((result) => result.reason?.message || '未知错误');
+
+  if (preloadErrors.length) {
+    showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
+  }
 
   if (!id) {
-    applyCoverValue(pickRandomCoverUrl());
+    const draft = loadDraftFromLocal();
+    if (draft) {
+      await maybeRestoreDraft();
+    } else {
+      const randomCover = pickRandomCoverUrl();
+      if (randomCover) applyCoverValue(randomCover);
+    }
+    updateEditorStats(getEditorContent());
     return;
   }
 
@@ -486,27 +846,54 @@ async function openEditor(id = null) {
     showFeedback('正在加载文章详情...', 'info');
     const json = await requestJson(`${API}/articles/${id}`);
     const a = json.data;
-    document.getElementById('editTitle').value = a.title || '';
-    document.getElementById('editSummary').value = a.summary || '';
-    applyCoverValue(a.cover_image || '');
-    document.getElementById('editCategory').value = a.category_id ? String(a.category_id) : '';
-    document.getElementById('editTags').value = a.tags || '';
-    document.getElementById('editIsTop').checked = !!a.is_top;
-    document.getElementById('editStatus').value = a.status || 'published';
-    document.getElementById('editContent').value = a.content || '';
-    clearFeedback();
+    applySnapshotToEditor({
+      title: a.title || '',
+      summary: a.summary || '',
+      cover_image: a.cover_image || '',
+      category_id: a.category_id ? String(a.category_id) : '',
+      tags: a.tags || '',
+      is_top: !!a.is_top,
+      status: a.status || 'published',
+      content: a.content || ''
+    });
+    if (!preloadErrors.length) {
+      clearFeedback();
+    }
+    await maybeRestoreDraft();
+    updateEditorStats(getEditorContent());
+    editorDirty = false;
   } catch (error) {
     showFeedback(`加载文章详情失败：${error.message}`, 'error');
   }
 }
 
 function closeEditor() {
-  document.getElementById('editorModal').style.display = 'none';
+  const modal = getEditorModal();
+  if (!modal) return;
+
+  if (editorDirty || autosaveTimer) {
+    const shouldClose = confirm('当前还有未提交到服务器的改动。\n确定关闭吗？本地草稿会保留，稍后可恢复。');
+    if (!shouldClose) return;
+  }
+
+  if (autosaveTimer) {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+    if (editorDirty) saveDraftToLocal();
+  }
+
+  modal.style.display = 'none';
+  closeImagePicker();
+  editorDirty = false;
+  setEditorSaveState('idle');
 }
 
 async function saveArticle() {
+  if (isSavingArticle) return;
+
   const saveButton = document.querySelector('#editorModal .btn.btn-primary');
   const originalText = saveButton ? saveButton.textContent : '保存';
+  const draftKeyBeforeSave = getDraftStorageKey();
   const data = {
     title: document.getElementById('editTitle').value.trim(),
     summary: document.getElementById('editSummary').value.trim(),
@@ -515,7 +902,7 @@ async function saveArticle() {
     tags: document.getElementById('editTags').value.trim(),
     is_top: document.getElementById('editIsTop').checked,
     status: document.getElementById('editStatus').value,
-    content: document.getElementById('editContent').value
+    content: getEditorContent()
   };
 
   if (!data.title) {
@@ -528,12 +915,14 @@ async function saveArticle() {
 
   try {
     clearFeedback();
+    isSavingArticle = true;
     if (saveButton) {
       saveButton.disabled = true;
       saveButton.textContent = '保存中...';
     }
+    setEditorSaveState('savingLocal', '正在保存到服务器...');
     showFeedback(editingId ? '正在保存文章...' : '正在创建文章...', 'info');
-    await requestJson(url, {
+    const response = await requestJson(url, {
       method,
       headers: {
         'Content-Type': 'application/json',
@@ -541,13 +930,28 @@ async function saveArticle() {
       },
       body: JSON.stringify(data)
     });
+
+    if (!editingId && response && response.data && response.data.id) {
+      editingId = response.data.id;
+    }
+
+    if (autosaveTimer) {
+      window.clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
+    clearDraftFromLocal(draftKeyBeforeSave);
+    clearDraftFromLocal(getDraftStorageKey());
+    editorDirty = false;
+    setEditorSaveState('savedRemote');
     closeEditor();
     showFeedback(editingId ? '文章更新成功' : '文章创建成功', 'success');
     renderArticlesLoading('正在刷新文章列表...');
     await loadArticles();
   } catch (error) {
     showFeedback(`保存失败：${error.message}`, 'error');
+    setEditorSaveState('saveFailed', '保存到服务器失败，本地草稿仍保留');
   } finally {
+    isSavingArticle = false;
     if (saveButton) {
       saveButton.disabled = false;
       saveButton.textContent = originalText;
@@ -908,6 +1312,21 @@ function copyUrl(url) {
   }
   document.body.removeChild(textarea);
 }
+
+document.addEventListener('keydown', (event) => {
+  const modal = getEditorModal();
+  if (!modal || modal.style.display !== 'block') return;
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+
+  event.preventDefault();
+  saveArticle();
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!(editorDirty || autosaveTimer)) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
 
 loadDashboardStats();
 loadArticlesPage();
