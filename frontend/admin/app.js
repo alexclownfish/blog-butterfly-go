@@ -23,6 +23,11 @@ let isSavingArticle = false;
 let imagePickerMode = null;
 let suppressAutosave = false;
 let currentEditorDraftKey = null;
+let currentServerArticleUpdatedAt = null;
+let pendingArticleHighlight = {
+  id: null,
+  title: ''
+};
 
 const AUTOSAVE_DELAY = 2000;
 const DRAFT_KEY_NEW = 'admin:draft:new';
@@ -294,6 +299,38 @@ function renderArticlesLoading(message = '正在加载文章列表...') {
   list.innerHTML = renderStateCard(message, 'info');
 }
 
+function queueArticleHighlight(article = {}) {
+  pendingArticleHighlight = {
+    id: article && article.id ? Number(article.id) : null,
+    title: article && article.title ? String(article.title).trim() : ''
+  };
+}
+
+function clearPendingArticleHighlight() {
+  pendingArticleHighlight = { id: null, title: '' };
+}
+
+function tryHighlightArticle(list, articles = []) {
+  if (!list || !pendingArticleHighlight.id) return false;
+
+  const cards = Array.from(list.querySelectorAll('.article-card'));
+  if (!cards.length) return false;
+
+  const targetArticle = articles.find((item) => Number(item.id) === pendingArticleHighlight.id)
+    || articles.find((item) => pendingArticleHighlight.title && String(item.title || '').trim() === pendingArticleHighlight.title);
+
+  if (!targetArticle) return false;
+
+  const targetCard = cards.find((card) => Number(card.dataset.articleId) === Number(targetArticle.id));
+  if (!targetCard) return false;
+
+  targetCard.classList.add('article-card-highlight');
+  targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => targetCard.classList.remove('article-card-highlight'), 2600);
+  clearPendingArticleHighlight();
+  return true;
+}
+
 function syncCategoryFilterOptions() {
   const select = document.getElementById('articleCategoryFilter');
   if (!select) return;
@@ -433,6 +470,7 @@ async function loadArticles() {
     articles.forEach((article) => {
       const div = document.createElement('article');
       div.className = 'article-card';
+      div.dataset.articleId = String(article.id);
       const statusText = article.status === 'draft' ? '草稿' : '已发布';
       const statusClass = article.status === 'draft' ? 'draft' : 'published';
       const topBadge = article.is_top ? '<span class="badge top">置顶</span>' : '';
@@ -477,6 +515,7 @@ async function loadArticles() {
     });
 
     renderArticlePagination();
+    tryHighlightArticle(list, articles);
   } catch (error) {
     const pagination = document.getElementById('article-pagination');
     if (pagination) pagination.innerHTML = '';
@@ -787,25 +826,41 @@ function bindEditorFieldListeners() {
   }
 }
 
-async function maybeRestoreDraft() {
+function maybeRestoreDraft() {
   const draft = loadDraftFromLocal();
-  if (!draft) return;
+  if (!draft) return false;
 
-  const message = editingId
-    ? `检测到本地草稿（${formatTimeLabel(new Date(draft.updated_at || Date.now()))}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
-    : `检测到未完成的新文章草稿（${formatTimeLabel(new Date(draft.updated_at || Date.now()))}）。\n要恢复它吗？`;
+  const draftUpdatedAt = draft.updated_at ? new Date(draft.updated_at) : new Date();
+  const hasServerTimestamp = Boolean(editingId && currentServerArticleUpdatedAt);
+  const serverUpdatedAt = hasServerTimestamp ? new Date(currentServerArticleUpdatedAt) : null;
+  const isDraftNewerThanServer = !serverUpdatedAt || Number.isNaN(serverUpdatedAt.getTime()) || draftUpdatedAt >= serverUpdatedAt;
+
+  let message = editingId
+    ? `检测到本地草稿（${formatTimeLabel(draftUpdatedAt)}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
+    : `检测到未完成的新文章草稿（${formatTimeLabel(draftUpdatedAt)}）。\n要恢复它吗？`;
+
+  if (editingId && hasServerTimestamp) {
+    const serverLabel = formatTimeLabel(serverUpdatedAt);
+    const draftLabel = formatTimeLabel(draftUpdatedAt);
+    message = isDraftNewerThanServer
+      ? `检测到较新的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
+      : `检测到较旧的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n仍要恢复它吗？选择“取消”将继续使用服务器内容。`;
+  }
 
   const shouldRestore = confirm(message);
-  if (shouldRestore) {
-    applySnapshotToEditor(draft);
-    setEditorSaveState('idle', `已恢复本地草稿 ${formatTimeLabel(new Date(draft.updated_at || Date.now()))}`);
-    editorDirty = false;
-  }
+  if (!shouldRestore) return false;
+
+  applySnapshotToEditor(draft);
+  currentEditorDraftKey = getDraftStorageKey();
+  setEditorSaveState('idle', `已恢复本地草稿 ${formatTimeLabel(draftUpdatedAt)}`);
+  editorDirty = false;
+  return true;
 }
 
 // Active mainline editor lives in index.html modal. Legacy editor.html is reference-only.
 async function openEditor(id = null) {
   editingId = id;
+  currentServerArticleUpdatedAt = null;
   currentEditorDraftKey = getDraftStorageKey();
   clearFeedback();
   setEditorModeHint(id ? `编辑文章 #${id}` : '新建文章');
@@ -832,9 +887,8 @@ async function openEditor(id = null) {
 
   if (!id) {
     const draft = loadDraftFromLocal();
-    if (draft) {
-      await maybeRestoreDraft();
-    } else {
+    const restored = draft ? maybeRestoreDraft() : false;
+    if (!restored) {
       const randomCover = pickRandomCoverUrl();
       if (randomCover) applyCoverValue(randomCover);
     }
@@ -846,6 +900,7 @@ async function openEditor(id = null) {
     showFeedback('正在加载文章详情...', 'info');
     const json = await requestJson(`${API}/articles/${id}`);
     const a = json.data;
+    currentServerArticleUpdatedAt = a.updated_at || null;
     applySnapshotToEditor({
       title: a.title || '',
       summary: a.summary || '',
@@ -859,12 +914,56 @@ async function openEditor(id = null) {
     if (!preloadErrors.length) {
       clearFeedback();
     }
-    await maybeRestoreDraft();
+    maybeRestoreDraft();
     updateEditorStats(getEditorContent());
     editorDirty = false;
   } catch (error) {
     showFeedback(`加载文章详情失败：${error.message}`, 'error');
   }
+}
+
+function discardEditorDraft() {
+  const draftKey = getDraftStorageKey();
+  const hasLocalDraft = !!loadDraftFromLocal();
+  const hasUnsavedChanges = editorDirty || autosaveTimer;
+
+  if (!hasLocalDraft && !hasUnsavedChanges) {
+    showFeedback('现在没有可丢弃的草稿，编辑器今天很乖。', 'info');
+    return;
+  }
+
+  const message = editingId
+    ? '确定放弃当前本地草稿吗？\n这会清掉本地自动保存内容，并恢复为服务器上的文章版本。'
+    : '确定放弃当前草稿吗？\n这会清空本地自动保存和编辑器里的内容。';
+
+  if (!confirm(message)) return;
+
+  if (autosaveTimer) {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+
+  clearDraftFromLocal(draftKey);
+  editorDirty = false;
+
+  if (editingId) {
+    openEditor(editingId)
+      .then(() => {
+        setEditorSaveState('idle', '本地草稿已放弃，已恢复服务器版本');
+        showFeedback('本地草稿已放弃，已帮你回到服务器版本。', 'success');
+      })
+      .catch((error) => {
+        showFeedback(`恢复服务器内容失败：${error.message}`, 'error');
+      });
+    return;
+  }
+
+  resetEditorFields();
+  const randomCover = pickRandomCoverUrl();
+  if (randomCover) applyCoverValue(randomCover);
+  updateEditorStats(getEditorContent());
+  setEditorSaveState('idle', '本地草稿已放弃');
+  showFeedback('草稿已放弃，编辑器已清空，可以重新开写啦。', 'success');
 }
 
 function closeEditor() {
@@ -884,8 +983,12 @@ function closeEditor() {
 
   modal.style.display = 'none';
   closeImagePicker();
+  editingId = null;
+  currentServerArticleUpdatedAt = null;
+  currentEditorDraftKey = null;
   editorDirty = false;
   setEditorSaveState('idle');
+  setEditorModeHint('新建文章');
 }
 
 async function saveArticle() {
@@ -934,6 +1037,14 @@ async function saveArticle() {
 
     if (!isEditing && response && response.data && response.data.id) {
       editingId = response.data.id;
+      currentServerArticleUpdatedAt = response.data.updated_at || null;
+      queueArticleHighlight({
+        id: response.data.id,
+        title: response.data.title || data.title
+      });
+    } else {
+      currentServerArticleUpdatedAt = response?.data?.updated_at || currentServerArticleUpdatedAt;
+      clearPendingArticleHighlight();
     }
 
     if (autosaveTimer) {

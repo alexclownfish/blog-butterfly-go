@@ -890,6 +890,23 @@ img {
   padding: 20px;
   display: grid;
   gap: 18px;
+  transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease;
+}
+
+.article-card-highlight {
+  border-color: rgba(77,226,197,0.7);
+  box-shadow: 0 0 0 1px rgba(77,226,197,0.16), 0 18px 44px rgba(77,226,197,0.18);
+  transform: translateY(-2px);
+  animation: articleCardPulse 1.2s ease 2;
+}
+
+@keyframes articleCardPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 1px rgba(77,226,197,0.16), 0 18px 44px rgba(77,226,197,0.18);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(77,226,197,0.28), 0 22px 54px rgba(77,226,197,0.26);
+  }
 }
 
 .article-card-head {
