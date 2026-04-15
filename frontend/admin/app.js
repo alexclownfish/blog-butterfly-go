@@ -894,6 +894,7 @@ async function saveArticle() {
   const saveButton = document.querySelector('#editorModal .btn.btn-primary');
   const originalText = saveButton ? saveButton.textContent : '保存';
   const draftKeyBeforeSave = getDraftStorageKey();
+  const isEditing = !!editingId;
   const data = {
     title: document.getElementById('editTitle').value.trim(),
     summary: document.getElementById('editSummary').value.trim(),
@@ -910,8 +911,8 @@ async function saveArticle() {
     return;
   }
 
-  const url = editingId ? `${API}/articles/${editingId}` : `${API}/articles`;
-  const method = editingId ? 'PUT' : 'POST';
+  const url = isEditing ? `${API}/articles/${editingId}` : `${API}/articles`;
+  const method = isEditing ? 'PUT' : 'POST';
 
   try {
     clearFeedback();
@@ -921,7 +922,7 @@ async function saveArticle() {
       saveButton.textContent = '保存中...';
     }
     setEditorSaveState('savingLocal', '正在保存到服务器...');
-    showFeedback(editingId ? '正在保存文章...' : '正在创建文章...', 'info');
+    showFeedback(isEditing ? '正在保存文章...' : '正在创建文章...', 'info');
     const response = await requestJson(url, {
       method,
       headers: {
@@ -931,7 +932,7 @@ async function saveArticle() {
       body: JSON.stringify(data)
     });
 
-    if (!editingId && response && response.data && response.data.id) {
+    if (!isEditing && response && response.data && response.data.id) {
       editingId = response.data.id;
     }
 
@@ -944,7 +945,26 @@ async function saveArticle() {
     editorDirty = false;
     setEditorSaveState('savedRemote');
     closeEditor();
-    showFeedback(editingId ? '文章更新成功' : '文章创建成功', 'success');
+
+    if (!isEditing && data.status === 'draft') {
+      articleFilters.status = 'draft';
+      articleFilters.search = data.title;
+      articlePagination.page = 1;
+
+      const statusFilter = document.getElementById('articleStatusFilter');
+      const searchInput = document.getElementById('articleSearchInput');
+      if (statusFilter) statusFilter.value = articleFilters.status;
+      if (searchInput) searchInput.value = articleFilters.search;
+    }
+
+    showFeedback(
+      isEditing
+        ? '文章更新成功'
+        : data.status === 'draft'
+          ? '草稿创建成功，已自动切到草稿列表并帮你定位标题。'
+          : '文章创建成功',
+      'success'
+    );
     renderArticlesLoading('正在刷新文章列表...');
     await loadArticles();
   } catch (error) {
