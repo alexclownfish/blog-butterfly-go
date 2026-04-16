@@ -873,19 +873,21 @@ async function openEditor(id = null) {
   setEditorSaveState('idle');
   editorDirty = false;
 
-  const preloadResults = await Promise.allSettled([
+  const preloadPromise = Promise.allSettled([
     loadCategoryOptions(),
     ensureImageCache()
   ]);
-  const preloadErrors = preloadResults
-    .filter((result) => result.status === 'rejected')
-    .map((result) => result.reason?.message || '未知错误');
-
-  if (preloadErrors.length) {
-    showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
-  }
 
   if (!id) {
+    const preloadResults = await preloadPromise;
+    const preloadErrors = preloadResults
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message || '未知错误');
+
+    if (preloadErrors.length) {
+      showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
+    }
+
     const draft = loadDraftFromLocal();
     const restored = draft ? maybeRestoreDraft() : false;
     if (!restored) {
@@ -911,7 +913,19 @@ async function openEditor(id = null) {
       status: a.status || 'published',
       content: a.content || ''
     });
-    if (!preloadErrors.length) {
+
+    const preloadResults = await preloadPromise;
+    const preloadErrors = preloadResults
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message || '未知错误');
+    const categorySelect = document.getElementById('editCategory');
+    if (categorySelect) {
+      categorySelect.value = a.category_id ? String(a.category_id) : '';
+    }
+
+    if (preloadErrors.length) {
+      showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
+    } else {
       clearFeedback();
     }
     maybeRestoreDraft();
