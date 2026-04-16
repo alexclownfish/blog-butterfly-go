@@ -434,8 +434,13 @@
       padding-right: 4px;
     }
 
+    .toc-list li {
+      position: relative;
+    }
+
     .toc-list a {
       display: block;
+      position: relative;
       padding: 8px 10px;
       border-radius: 12px;
       color: var(--muted-strong);
@@ -443,6 +448,24 @@
       border: 1px solid transparent;
       transition: all .2s ease;
       font-size: 0.92rem;
+      line-height: 1.45;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .toc-list a::before {
+      content: '';
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(124,140,255,0.45);
+      transform: translateY(-50%);
+      box-shadow: 0 0 0 4px rgba(124,140,255,0.08);
+      transition: all .2s ease;
     }
 
     .toc-list a:hover,
@@ -450,10 +473,67 @@
       color: white;
       background: rgba(124,140,255,0.14);
       border-color: rgba(124,140,255,0.2);
+      transform: translateX(2px);
     }
 
-    .toc-h3 a { padding-left: 20px; }
-    .toc-h4 a { padding-left: 30px; }
+    .toc-list a:hover::before,
+    .toc-list a.active::before {
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 0 0 4px rgba(124,140,255,0.16);
+    }
+
+    .toc-h1 a {
+      padding-left: 28px;
+      font-weight: 700;
+      color: white;
+      background: rgba(124,140,255,0.12);
+      border-color: rgba(124,140,255,0.16);
+    }
+
+    .toc-h1 a::before {
+      left: 12px;
+      width: 8px;
+      height: 8px;
+      background: rgba(255,255,255,0.95);
+      box-shadow: 0 0 0 5px rgba(124,140,255,0.16);
+    }
+
+    .toc-h2 a {
+      padding-left: 40px;
+      font-weight: 600;
+    }
+
+    .toc-h2 a::before {
+      left: 22px;
+    }
+
+    .toc-h3 a {
+      padding-left: 54px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .toc-h3 a::before {
+      left: 36px;
+      width: 5px;
+      height: 5px;
+      background: rgba(124,140,255,0.36);
+      box-shadow: 0 0 0 3px rgba(124,140,255,0.08);
+    }
+
+    .toc-h4 a {
+      padding-left: 68px;
+      font-size: 0.88rem;
+      color: rgba(230,235,255,0.72);
+    }
+
+    .toc-h4 a::before {
+      left: 50px;
+      width: 4px;
+      height: 4px;
+      background: rgba(124,140,255,0.3);
+      box-shadow: 0 0 0 3px rgba(124,140,255,0.06);
+    }
 
     .loading,
     .error-state {
@@ -660,7 +740,7 @@
     }
 
     function buildTOC() {
-      const headings = articleEl.querySelectorAll('h2, h3, h4');
+      const headings = articleEl.querySelectorAll('h1, h2, h3, h4');
       tocListEl.innerHTML = '';
       if (!headings.length) {
         tocCardEl.hidden = true;
