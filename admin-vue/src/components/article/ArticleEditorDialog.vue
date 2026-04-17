@@ -538,7 +538,6 @@ function saveLocalDraft() {
     localDraftTimestamp.value = snapshot.updated_at
     localDraftState.value = 'saved'
     currentDraftExists.value = true
-    updateDraftRecoverySnapshot()
   } catch {
     localDraftState.value = 'error'
   }
