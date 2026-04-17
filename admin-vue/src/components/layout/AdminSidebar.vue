@@ -20,6 +20,11 @@
         <span>📄</span>
         <span>文章管理</span>
       </RouterLink>
+
+      <RouterLink to="/categories" class="sidebar-link">
+        <span>🗂️</span>
+        <span>分类管理</span>
+      </RouterLink>
     </div>
 
     <div class="sidebar-footnote">

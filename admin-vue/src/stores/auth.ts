@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { changePasswordApi, loginApi } from '@/api/auth'
-import { getToken, removeToken, setToken } from '@/utils/auth'
+import {
+  getForcePasswordChange,
+  getToken,
+  removeForcePasswordChangeStorage,
+  removeToken,
+  setForcePasswordChangeStorage,
+  setToken
+} from '@/utils/auth'
 import type { ChangePasswordPayload, LoginPayload } from '@/types/auth'
 
 interface AuthState {
@@ -23,6 +30,7 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     restoreToken() {
       this.token = getToken()
+      this.forcePasswordChange = getForcePasswordChange()
     },
 
     setTokenValue(token: string) {
@@ -32,12 +40,14 @@ export const useAuthStore = defineStore('auth', {
 
     setForcePasswordChange(value: boolean) {
       this.forcePasswordChange = value
+      setForcePasswordChangeStorage(value)
     },
 
     clearToken() {
       this.token = ''
       this.forcePasswordChange = false
       removeToken()
+      removeForcePasswordChangeStorage()
     },
 
     async login(payload: LoginPayload) {

@@ -126,6 +126,10 @@ func CreateArticle(c *gin.Context) {
 	if status == "" {
 		status = "draft"
 	}
+	if req.CategoryID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择文章分类"})
+		return
+	}
 	article := models.Article{
 		Title:      req.Title,
 		Content:    req.Content,
@@ -136,8 +140,14 @@ func CreateArticle(c *gin.Context) {
 		IsTop:      req.IsTop,
 		Status:     status,
 	}
-	config.DB.Create(&article)
-	config.DB.Preload("Category").First(&article, article.ID)
+	if err := config.DB.Create(&article).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "创建文章失败，请检查分类是否存在或数据是否有效"})
+		return
+	}
+	if err := config.DB.Preload("Category").First(&article, article.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "文章已创建，但加载详情失败"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"data": article})
 }
 
@@ -160,6 +170,10 @@ func UpdateArticle(c *gin.Context) {
 	if status == "" {
 		status = article.Status
 	}
+	if req.CategoryID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请选择文章分类"})
+		return
+	}
 	article.Title = req.Title
 	article.Content = req.Content
 	article.Summary = req.Summary
@@ -168,8 +182,14 @@ func UpdateArticle(c *gin.Context) {
 	article.Tags = req.Tags
 	article.IsTop = req.IsTop
 	article.Status = status
-	config.DB.Save(&article)
-	config.DB.Preload("Category").First(&article, article.ID)
+	if err := config.DB.Save(&article).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "更新文章失败，请检查分类是否存在或数据是否有效"})
+		return
+	}
+	if err := config.DB.Preload("Category").First(&article, article.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "文章已更新，但加载详情失败"})
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{"data": article})
 }
 

@@ -26,6 +26,7 @@ const authStore = useAuthStore()
 const pageTitle = computed(() => {
   if (route.path === '/change-password') return '修改密码'
   if (route.path.startsWith('/articles')) return '文章管理'
+  if (route.path.startsWith('/categories')) return '分类管理'
   if (route.path.startsWith('/dashboard')) return '工作台'
   return '内容管理后台'
 })
@@ -36,6 +37,9 @@ const pageDescription = computed(() => {
   }
   if (route.path.startsWith('/articles')) {
     return '统一处理文章发布、编辑、筛选与基础内容维护，优先保障真实接口联调可用。'
+  }
+  if (route.path.startsWith('/categories')) {
+    return '维护文章分类字典，先把内容货架摆明白，编辑时才不至于手忙脚乱。'
   }
   if (route.path.startsWith('/dashboard')) {
     return '这是新一代 admin-vue 后台工作台的起点，先把内容主链路跑通，再做效率增强。'

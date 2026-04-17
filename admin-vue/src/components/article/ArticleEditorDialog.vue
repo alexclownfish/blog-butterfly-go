@@ -489,6 +489,7 @@ const localDraftLabel = computed(() => {
 
 const rules: FormRules<ArticleEditorForm> = {
   title: [{ required: true, message: '请输入文章标题', trigger: 'blur' }],
+  category_id: [{ required: true, message: '请选择文章分类', trigger: 'change' }],
   content: [{ required: true, message: '请输入正文内容', trigger: 'blur' }],
   status: [{ required: true, message: '请选择文章状态', trigger: 'change' }]
 }
