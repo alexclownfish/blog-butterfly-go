@@ -77,11 +77,39 @@
             />
           </el-form-item>
 
-          <el-form-item label="封面图片 URL" prop="cover_image" class="span-2">
-            <el-input
-              v-model="form.cover_image"
-              placeholder="先保留 URL 输入，第二阶段再接图床选择器"
-            />
+          <el-form-item label="封面图片" prop="cover_image" class="span-2">
+            <div class="cover-field">
+              <el-input
+                v-model="form.cover_image"
+                placeholder="支持手输 URL，也可以从图床素材库选择"
+              >
+                <template #append>
+                  <el-button @click="openImagePicker('cover')">从图床选择</el-button>
+                </template>
+              </el-input>
+
+              <div v-if="form.cover_image.trim()" class="cover-preview-card">
+                <el-image
+                  :src="form.cover_image"
+                  fit="cover"
+                  class="cover-preview-card__image"
+                  :preview-src-list="[form.cover_image]"
+                  preview-teleported
+                >
+                  <template #error>
+                    <div class="cover-preview-card__fallback">封面预览失败</div>
+                  </template>
+                </el-image>
+                <div class="cover-preview-card__meta">
+                  <div class="cover-preview-card__title">当前封面</div>
+                  <p class="cover-preview-card__url">{{ form.cover_image }}</p>
+                  <div class="cover-preview-card__actions">
+                    <el-button size="small" @click="openImagePicker('cover')">换一张</el-button>
+                    <el-button size="small" text type="danger" @click="clearCoverImage">清空封面</el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </el-form-item>
         </div>
 
@@ -148,6 +176,9 @@
                   >
                     链接
                   </el-button>
+                  <el-button size="small" type="primary" plain @click="openImagePicker('markdown')">
+                    插入图片
+                  </el-button>
                 </el-button-group>
               </div>
               <div class="markdown-toolbar__right">
@@ -193,6 +224,67 @@
       </div>
     </template>
   </el-dialog>
+
+  <el-dialog
+    v-model="imagePickerVisible"
+    :title="imagePickerTitle"
+    width="920px"
+    append-to-body
+    destroy-on-close
+  >
+    <div v-loading="imageLoading" class="image-picker">
+      <div class="image-picker__toolbar">
+        <el-input
+          v-model="imageSearch"
+          clearable
+          placeholder="搜索图片 URL / key"
+          class="image-picker__search"
+        />
+        <div class="image-picker__toolbar-actions">
+          <el-button @click="refreshImages">刷新</el-button>
+          <el-button text @click="imagePickerVisible = false">关闭</el-button>
+        </div>
+      </div>
+
+      <el-alert
+        v-if="imageError"
+        :title="imageError"
+        type="error"
+        show-icon
+        :closable="false"
+        class="image-picker__alert"
+      />
+
+      <el-empty
+        v-if="!imageLoading && !filteredImages.length"
+        :description="images.length ? '没有匹配的图片，换个关键词试试' : '图床里还没有可用图片'"
+      />
+
+      <div v-else class="image-grid">
+        <button
+          v-for="image in filteredImages"
+          :key="image.key || image.url"
+          type="button"
+          class="image-card"
+          @click="applyImageSelection(image)"
+        >
+          <el-image :src="image.url" fit="cover" class="image-card__image" lazy>
+            <template #error>
+              <div class="image-card__fallback">图片加载失败</div>
+            </template>
+          </el-image>
+          <div class="image-card__meta">
+            <div class="image-card__key">{{ image.key || '未命名素材' }}</div>
+            <div class="image-card__url">{{ image.url }}</div>
+            <div class="image-card__footer">
+              <span>{{ formatFileSize(image.size) }}</span>
+              <span>{{ formatImageTime(image.time) }}</span>
+            </div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup lang="ts">
@@ -202,9 +294,11 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { marked } from 'marked'
 
 import { fetchArticleDetailApi, createArticleApi, updateArticleApi } from '@/api/articles'
+import { fetchImagesApi } from '@/api/images'
 import type { ArticleEditorForm } from '@/types/article'
 import { createDefaultArticleForm } from '@/types/article'
 import type { Category } from '@/types/category'
+import type { ImageAsset } from '@/types/image'
 
 interface Props {
   modelValue: boolean
@@ -220,6 +314,7 @@ interface LocalDraftSnapshot extends ArticleEditorForm {
 type PreviewMode = 'edit' | 'split' | 'preview'
 type LocalDraftState = 'clean' | 'dirty' | 'saving' | 'saved' | 'error' | 'restored'
 type ServerSaveState = 'idle' | 'saving' | 'saved' | 'error'
+type ImagePickerMode = 'cover' | 'markdown'
 
 const AUTOSAVE_DELAY = 1200
 const NEW_ARTICLE_DRAFT_KEY = 'admin-vue:article-editor:new'
@@ -250,6 +345,13 @@ const suppressAutosave = ref(false)
 const dialogOpened = ref(false)
 const currentDraftExists = ref(false)
 
+const imagePickerVisible = ref(false)
+const imagePickerMode = ref<ImagePickerMode>('cover')
+const imageLoading = ref(false)
+const imageError = ref('')
+const imageSearch = ref('')
+const images = ref<ImageAsset[]>([])
+
 const form = reactive<ArticleEditorForm>(createDefaultArticleForm())
 
 const isEditMode = computed(() => Boolean(props.articleId))
@@ -257,6 +359,19 @@ const dialogTitle = computed(() => (isEditMode.value ? '编辑文章' : '新建�
 const categories = computed(() => props.categories || [])
 const hasLocalDraft = computed(() => currentDraftExists.value)
 const draftRecoveryAvailable = computed(() => Boolean(draftRecoverySnapshot.value))
+const imagePickerTitle = computed(() =>
+  imagePickerMode.value === 'cover' ? '从图床选择封面' : '从图床选择图片插入正文'
+)
+const filteredImages = computed(() => {
+  const keyword = imageSearch.value.trim().toLowerCase()
+  if (!keyword) return images.value
+
+  return images.value.filter((image) => {
+    const key = image.key?.toLowerCase() || ''
+    const url = image.url.toLowerCase()
+    return key.includes(keyword) || url.includes(keyword)
+  })
+})
 
 const draftRecoveryMessage = computed(() => {
   if (!draftRecoverySnapshot.value) return ''
@@ -456,6 +571,22 @@ function formatDateTime(value: string) {
   })
 }
 
+function formatFileSize(value?: number) {
+  const size = Number(value) || 0
+  if (!size) return '未知大小'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+function formatImageTime(value?: number) {
+  const timestamp = Number(value) || 0
+  if (!timestamp) return '时间未知'
+
+  const milliseconds = timestamp > 1e15 ? Math.floor(timestamp / 10000) : timestamp
+  return formatDateTime(new Date(milliseconds).toISOString())
+}
+
 async function loadDetail(id: number) {
   detailLoading.value = true
   try {
@@ -540,6 +671,76 @@ function discardLocalDraft() {
   clearLocalDraft()
   draftRecoverySnapshot.value = null
   ElMessage.success('本地草稿已清除')
+}
+
+function clearCoverImage() {
+  form.cover_image = ''
+}
+
+async function ensureImagesLoaded(force = false) {
+  if (imageLoading.value) return
+  if (!force && images.value.length) return
+
+  imageLoading.value = true
+  imageError.value = ''
+  try {
+    images.value = await fetchImagesApi()
+  } catch (error: any) {
+    imageError.value =
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      '加载图床素材失败'
+  } finally {
+    imageLoading.value = false
+  }
+}
+
+async function refreshImages() {
+  await ensureImagesLoaded(true)
+}
+
+function openImagePicker(mode: ImagePickerMode) {
+  imagePickerMode.value = mode
+  imagePickerVisible.value = true
+  imageSearch.value = ''
+  void ensureImagesLoaded()
+}
+
+function insertMarkdownImage(url: string, alt = '图片描述') {
+  const textarea = contentTextareaRef.value
+  const snippet = `![${alt}](${url})`
+
+  if (!textarea) {
+    form.content = form.content ? `${form.content}\n${snippet}` : snippet
+    return
+  }
+
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const selectedText = form.content.slice(start, end).trim()
+  const imageAlt = selectedText || alt
+  const nextSnippet = `![${imageAlt}](${url})`
+
+  form.content = `${form.content.slice(0, start)}${nextSnippet}${form.content.slice(end)}`
+
+  nextTick(() => {
+    textarea.focus()
+    const cursor = start + nextSnippet.length
+    textarea.setSelectionRange(cursor, cursor)
+  })
+}
+
+function applyImageSelection(image: ImageAsset) {
+  if (imagePickerMode.value === 'cover') {
+    form.cover_image = image.url
+    ElMessage.success('已设置为封面图')
+  } else {
+    insertMarkdownImage(image.url, image.key || '图片描述')
+    ElMessage.success('已插入 Markdown 图片')
+  }
+
+  imagePickerVisible.value = false
 }
 
 async function handleSubmit() {
@@ -722,6 +923,66 @@ onBeforeUnmount(() => {
   grid-column: span 2;
 }
 
+.cover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.cover-preview-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 12px;
+  background: var(--el-fill-color-lighter);
+}
+
+.cover-preview-card__image {
+  width: 160px;
+  height: 96px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.cover-preview-card__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color);
+}
+
+.cover-preview-card__meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.cover-preview-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.cover-preview-card__url {
+  margin: 0;
+  color: var(--el-text-color-regular);
+  word-break: break-all;
+  line-height: 1.6;
+}
+
+.cover-preview-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
 .editor-meta-row {
   display: flex;
   gap: 20px;
@@ -875,6 +1136,101 @@ onBeforeUnmount(() => {
   color: var(--el-color-primary);
 }
 
+.image-picker {
+  min-height: 240px;
+}
+
+.image-picker__toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.image-picker__search {
+  flex: 1;
+  min-width: 240px;
+}
+
+.image-picker__toolbar-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.image-picker__alert {
+  margin-bottom: 16px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.image-card {
+  padding: 0;
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--el-bg-color);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.image-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary-light-5);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 10%);
+}
+
+.image-card__image {
+  width: 100%;
+  height: 152px;
+  display: block;
+  background: var(--el-fill-color-light);
+}
+
+.image-card__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--el-text-color-secondary);
+  background: var(--el-fill-color-light);
+}
+
+.image-card__meta {
+  padding: 12px;
+}
+
+.image-card__key {
+  font-weight: 600;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.image-card__url {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.image-card__footer {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
@@ -891,6 +1247,15 @@ onBeforeUnmount(() => {
     grid-column: span 1;
   }
 
+  .cover-preview-card {
+    flex-direction: column;
+  }
+
+  .cover-preview-card__image {
+    width: 100%;
+    height: 180px;
+  }
+
   .markdown-workspace.mode-split {
     grid-template-columns: 1fr;
   }
@@ -898,6 +1263,10 @@ onBeforeUnmount(() => {
   .markdown-pane--editor {
     border-right: none;
     border-bottom: 1px solid var(--el-border-color-light);
+  }
+
+  .image-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
