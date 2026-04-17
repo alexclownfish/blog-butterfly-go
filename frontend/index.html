@@ -498,10 +498,107 @@
       border-color: rgba(255,255,255,0.12);
     }
 
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 26px;
+    }
+
+    .hero-intro {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .hero-lead {
+      max-width: 60ch;
+      color: rgba(245, 242, 234, 0.8);
+      font-size: 1.02rem;
+      line-height: 1.75;
+    }
+
+    .hero-subnote {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .micro-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.055);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--cream-strong);
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .hero-editor-note {
+      display: grid;
+      gap: 12px;
+      padding: 18px 20px;
+      max-width: 620px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.028));
+      border: 1px solid rgba(255,255,255,0.1);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .hero-editor-note small {
+      color: var(--muted-strong);
+      font-size: 0.76rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .hero-editor-note p {
+      margin: 0;
+      max-width: none;
+      font-size: 0.95rem;
+      line-height: 1.72;
+      color: rgba(245, 242, 234, 0.74);
+    }
+
     .hero-side {
       display: grid;
       gap: 16px;
       align-content: start;
+    }
+
+    .stat-card-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted-strong);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    .stat-card-note {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat-card-note span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted-strong);
+      font-size: 0.76rem;
+      letter-spacing: 0.04em;
     }
 
     .stat-card,
@@ -703,6 +800,31 @@
     }
 
     .section-copy h2 { margin-bottom: 8px; }
+
+    .section-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--muted-strong);
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .section-kicker::before {
+      content: '';
+      width: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.45));
+    }
+
+    .section-kicker::after {
+      content: '';
+      width: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.45), transparent);
+    }
 
     .page-stats {
       display: flex;
@@ -1090,30 +1212,49 @@
 
       <section class="hero">
         <div class="hero-copy">
-          <div class="eyebrow">✦ 个人技术博客 · 持续更新中</div>
-          <h1>把零碎经验，炼成能复用的战斗力。</h1>
-          <p>
-            这里收录运维踩坑、开发实战、Kubernetes 折腾日记，以及那些“今天不记下来，明天又得重新掉坑里”的瞬间。
-            你负责灵感，我负责把内容排成更好看的样子。
-          </p>
+          <div class="hero-intro">
+            <div class="eyebrow">✦ Personal Tech Journal · Continuously Refined</div>
+            <h1>把经验写成作品，
+              也把踩坑沉淀成下一次的底气。</h1>
+            <p class="hero-lead">
+              这里不是流水账式的技术堆放区，而是一份持续更新的个人技术刊物：记录运维现场、开发实战、Kubernetes 折腾、部署复盘，
+              也认真保存那些今天解决、明天就能救命的关键细节。
+            </p>
+            <div class="hero-subnote">
+              <span class="micro-pill">现场经验 / 可复用</span>
+              <span class="micro-pill">运维 · 开发 · 基础设施</span>
+              <span class="micro-pill">API 驱动 · 持续更新</span>
+            </div>
+          </div>
           <div class="hero-actions">
-            <a class="btn btn-primary" href="#articles-section">开始逛文章</a>
-            <a class="btn btn-secondary" href="/archives/">查看归档</a>
+            <a class="btn btn-primary" href="#articles-section">开始阅读</a>
+            <a class="btn btn-secondary" href="/archives/">查看归档馆</a>
+          </div>
+          <div class="hero-editor-note">
+            <small>Editor's Note</small>
+            <p>
+              每一篇内容都尽量保留“为什么这样做、踩过什么坑、下次如何更快”的上下文。
+              与其只给结论，不如把路径也写清楚——这样下一次回来看，才不会被过去的自己背刺。
+            </p>
           </div>
         </div>
         <div class="hero-side">
           <article class="stat-card">
-            <small>首页状态</small>
+            <span class="stat-card-label">● Home Dispatch</span>
             <div class="stat-value" id="hero-total-count">--</div>
             <p id="hero-stat-copy" class="search-hint">正在从内容仓库抓取最新文章，请稍候。</p>
+            <div class="stat-card-note">
+              <span>精选内容实时编排</span>
+              <span>筛选状态与 URL 同步</span>
+            </div>
           </article>
           <div class="mini-grid">
             <article class="mini-card">
-              <small>当前筛选</small>
+              <small>当前阅读视角</small>
               <strong id="hero-current-filter">全部文章</strong>
             </article>
             <article class="mini-card">
-              <small>当前页码</small>
+              <small>阅读进度</small>
               <strong id="hero-current-page">Page 1</strong>
             </article>
           </div>
@@ -1124,8 +1265,9 @@
         <section class="control-panel">
           <div class="control-head">
             <div>
+              <div class="section-kicker">Reading Controls</div>
               <h2>筛选与检索</h2>
-              <p>保留原有搜索、分类、分页逻辑，只是把颜值从“能用”升级到“想用”。</p>
+              <p>像翻阅一本有目录的技术刊物一样浏览内容：先定主题，再缩小范围，把你想找的经验尽快捞出来。</p>
             </div>
             <div class="page-stats">
               <span class="dot"></span>
@@ -1135,21 +1277,21 @@
 
           <div class="control-grid">
             <div class="search-box">
-              <label class="search-label" for="search-input">标题搜索</label>
+              <label class="search-label" for="search-input">按标题或关键词检索</label>
               <div class="search-input-wrap">
                 <span>⌕</span>
-                <input type="text" id="search-input" placeholder="输入关键词，比如：K3s / Grafana / Oracle / Docker">
+                <input type="text" id="search-input" placeholder="试试：K3s、Grafana、Oracle、Docker、部署、监控…">
               </div>
-              <div class="search-hint">搜索会同步写入 URL，刷新页面也不会丢。</div>
+              <div class="search-hint">搜索条件会同步写入 URL，刷新、分享或稍后回来都不会丢。</div>
             </div>
 
             <div class="search-box">
-              <div class="category-label">分类过滤</div>
+              <div class="category-label">按主题浏览</div>
               <div class="category-filter">
-                <button class="category-btn active" data-id="0">全部</button>
+                <button class="category-btn active" data-id="0">全部内容</button>
                 <div id="category-list" class="category-filter"></div>
               </div>
-              <div class="category-hint">点击分类即时过滤，并保留当前浏览状态。</div>
+              <div class="category-hint">点击分类即时切换阅读视角，并保留当前浏览上下文。</div>
             </div>
           </div>
         </section>
@@ -1157,8 +1299,9 @@
         <section id="articles-section">
           <div class="section-head">
             <div class="section-copy">
+              <div class="section-kicker">Latest Dispatch</div>
               <h2>最新文章</h2>
-              <p>按接口返回动态渲染，卡片点击仍会保留来源参数，返回列表不迷路。</p>
+              <p>从接口动态取回内容，保留列表来源参数与分页状态；你可以专注阅读，不用担心“点进去之后回不来”。</p>
             </div>
             <div class="page-stats" id="page-stats"></div>
           </div>
@@ -1166,8 +1309,8 @@
           <div id="loading" class="loading">内容调度中，请稍等片刻…</div>
           <div id="article-list" class="article-list"></div>
           <div class="empty-state" id="empty-state" hidden>
-            <strong>这次筛选没有命中文章</strong>
-            <p>试试更短的关键词，或者切换到“全部分类”看看～</p>
+            <strong>这次没有匹配到合适的文章</strong>
+            <p>换个更短的关键词，或回到「全部内容」，也许你要找的答案就在下一张卡片里。</p>
           </div>
           <div class="pagination-shell">
             <div id="pagination" class="pagination"></div>
@@ -1175,7 +1318,7 @@
         </section>
       </main>
 
-      <div class="footer-note">Built for reading comfort · API-driven · UI upgraded without blowing up the engine ✨</div>
+      <div class="footer-note">A living technical journal · Curated for clarity · Powered by real content, not decorative smoke ✨</div>
     </div>
   </div>
 
@@ -1286,18 +1429,18 @@
 
     function getCategoryName() {
       if (currentTag) return '#' + currentTag;
-      if (currentCategory === 0) return '全部文章';
-      return categoryMap.get(currentCategory) || '当前分类';
+      if (currentCategory === 0) return '全部内容';
+      return categoryMap.get(currentCategory) || '当前主题';
     }
 
     function updateHeroMeta(page = currentPage, total = lastTotal) {
       document.getElementById('hero-current-page').textContent = `Page ${page}`;
       document.getElementById('hero-current-filter').textContent = getCategoryName();
       document.getElementById('hero-total-count').textContent = total;
-      document.getElementById('hero-live-pill').textContent = total > 0 ? `共 ${total} 篇内容在线` : '等待文章上线';
+      document.getElementById('hero-live-pill').textContent = total > 0 ? `${total} 篇内容已归档` : '等待内容归档';
       document.getElementById('hero-stat-copy').textContent = total > 0
-        ? `当前正在展示「${getCategoryName()}」相关内容，UI 已升级，内容引擎照常运转。`
-        : '暂未获取到文章数据，请检查筛选条件或接口状态。';
+        ? `当前正在浏览「${getCategoryName()}」视角，内容已同步到阅读面板，可继续向下探索。`
+        : '暂时还没有抓到可展示的内容，检查筛选条件后再试一次。';
     }
 
     function updateResultSummary(page, total, pageSize, listLength) {
@@ -1305,11 +1448,11 @@
       const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
       const end = total === 0 ? 0 : start + listLength - 1;
       const summary = total === 0
-        ? '当前没有可显示的文章'
-        : `显示第 ${start}-${end} 篇，共 ${total} 篇 · 第 ${page}/${totalPages} 页`;
+        ? '当前视角下还没有可展示的文章'
+        : `正在阅读第 ${start}-${end} 篇，共 ${total} 篇 · 第 ${page}/${totalPages} 页`;
       document.getElementById('results-summary').textContent = summary;
       document.getElementById('page-stats').innerHTML = total === 0
-        ? '<span>暂无数据</span>'
+        ? '<span>暂无内容入列</span>'
         : `<span class="dot"></span><span>${getCategoryName()}</span><span>·</span><span>${total} 篇文章</span>`;
       updateHeroMeta(page, total);
     }
@@ -1382,7 +1525,7 @@
 
       try {
         loadingEl.style.display = 'block';
-        loadingEl.textContent = '内容调度中，请稍等片刻…';
+        loadingEl.textContent = '内容编排中，请稍等片刻…';
         listEl.innerHTML = '';
         paginationEl.innerHTML = '';
         emptyEl.hidden = true;
@@ -1410,13 +1553,13 @@
       } catch (error) {
         console.error('加载文章失败:', error);
         loadingEl.style.display = 'block';
-        loadingEl.textContent = '加载失败，请稍后重试。';
+        loadingEl.textContent = '内容加载暂时失败，请稍后回来看看。';
         listEl.innerHTML = '';
         document.getElementById('empty-state').hidden = true;
-        document.getElementById('results-summary').textContent = '文章数据加载失败';
-        document.getElementById('page-stats').innerHTML = '<span>接口暂时开小差了</span>';
-        document.getElementById('hero-live-pill').textContent = '接口连接异常';
-        document.getElementById('hero-stat-copy').textContent = '文章内容暂时没有成功返回，稍后再试试。';
+        document.getElementById('results-summary').textContent = '内容面板暂时不可用';
+        document.getElementById('page-stats').innerHTML = '<span>接口刚刚走神了</span>';
+        document.getElementById('hero-live-pill').textContent = '连接暂时中断';
+        document.getElementById('hero-stat-copy').textContent = '文章内容这次没有顺利返回，等接口缓过神来我们再继续阅读。';
       }
     }
 
