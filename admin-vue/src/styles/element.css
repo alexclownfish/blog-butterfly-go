@@ -1,0 +1,61 @@
+.el-button--primary {
+  --el-button-bg-color: var(--brand);
+  --el-button-border-color: var(--brand);
+  --el-button-hover-bg-color: #8e9aff;
+  --el-button-hover-border-color: #8e9aff;
+  --el-button-active-bg-color: #697cff;
+  --el-button-active-border-color: #697cff;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-popper,
+.el-table,
+.el-dialog,
+.el-pagination.is-background .btn-next,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .el-pager li {
+  background-color: rgba(12, 18, 36, 0.9) !important;
+  color: var(--text) !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+}
+
+.el-input__inner,
+.el-textarea__inner {
+  color: var(--text) !important;
+}
+
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-border-color: rgba(255, 255, 255, 0.08);
+  --el-table-header-bg-color: rgba(255, 255, 255, 0.04);
+  --el-table-text-color: var(--text);
+  --el-table-header-text-color: var(--muted-strong);
+}
+
+.el-table th.el-table__cell,
+.el-table tr {
+  background: transparent !important;
+}
+
+.el-dialog {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px !important;
+}
+
+.el-message-box {
+  background: rgba(12, 18, 36, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.el-message-box__title,
+.el-message-box__content {
+  color: var(--text) !important;
+}
