@@ -1188,6 +1188,7 @@ async function addCategory() {
     input.value = '';
     articleCategories = [];
     await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
     await loadDashboardStats();
     showFeedback('分类添加成功', 'success');
   } catch (error) {
@@ -1235,6 +1236,7 @@ async function deleteCat(id) {
     });
     articleCategories = [];
     await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
     await loadDashboardStats();
     showFeedback('分类删除成功', 'success');
   } catch (error) {
@@ -1247,22 +1249,25 @@ function logout() {
   location.href = '/admin/login.html';
 }
 
-function loadImageHistory() {
+async function loadImageHistory() {
   if (imageCache) {
     renderImages();
     return;
   }
+
   const list = document.getElementById('imageHistory');
   if (list) list.innerHTML = renderStateCard('正在加载图片列表...', 'info');
-  fetch(`${API}/images`, { headers: { 'Authorization': `Bearer ${token}` } })
-    .then((res) => res.json())
-    .then((json) => {
-      imageCache = json.data || [];
-      renderImages();
-    })
-    .catch((error) => {
-      if (list) list.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+
+  try {
+    const json = await requestJson(`${API}/images`, {
+      headers: { 'Authorization': `Bearer ${token}` }
     });
+    imageCache = Array.isArray(json.data) ? json.data : [];
+    renderImages();
+  } catch (error) {
+    if (list) list.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+    showFeedback(`加载图片失败：${error.message}`, 'error');
+  }
 }
 
 function changePage(page) {
@@ -1282,6 +1287,8 @@ function loadImagesPage() {
           <p>支持拖拽上传、多图管理与批量删除，帮助你统一维护内容素材资源。</p>
         </div>
       </div>
+
+      <div id="page-feedback" class="feedback-banner" style="display:none;"></div>
 
       <div id="uploadArea" class="upload-dropzone">
         <div class="upload-emoji">🖼️</div>
@@ -1324,14 +1331,25 @@ function uploadMultiple(files) {
   `;
 
   let completed = 0;
-  const promises = Array.from(files).map((file) => {
+  const uploadTasks = Array.from(files).map((file) => {
     const formData = new FormData();
     formData.append('image', file);
     return fetch(`${API}/upload`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData
-    }).then(() => {
+    }).then(async (response) => {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error((payload && (payload.error || payload.message)) || `${file.name} 上传失败（${response.status}）`);
+      }
+
       completed++;
       result.innerHTML = `
         <div class="upload-status-card">
@@ -1339,16 +1357,44 @@ function uploadMultiple(files) {
           <p>正在处理 ${completed}/${files.length} 张图片...</p>
         </div>
       `;
-    });
+
+      return {
+        name: file.name,
+        success: true
+      };
+    }).catch((error) => ({
+      name: file.name,
+      success: false,
+      error: error.message || '上传失败'
+    }));
   });
 
-  Promise.all(promises).then(() => {
-    result.innerHTML = `
-      <div class="upload-status-card success">
-        <strong>上传完成</strong>
-        <p>✅ 已成功上传 ${files.length} 张图片，可直接用于封面或正文配图。</p>
-      </div>
-    `;
+  Promise.all(uploadTasks).then((results) => {
+    const successCount = results.filter((item) => item.success).length;
+    const failedItems = results.filter((item) => !item.success);
+
+    if (!failedItems.length) {
+      result.innerHTML = `
+        <div class="upload-status-card success">
+          <strong>上传完成</strong>
+          <p>✅ 已成功上传 ${successCount} 张图片，可直接用于封面或正文配图。</p>
+        </div>
+      `;
+      showFeedback(`图片上传成功，共 ${successCount} 张。`, 'success');
+    } else {
+      const failedSummary = failedItems
+        .slice(0, 3)
+        .map((item) => `${item.name}：${item.error}`)
+        .join('；');
+      result.innerHTML = `
+        <div class="upload-status-card error">
+          <strong>上传完成（部分失败）</strong>
+          <p>成功 ${successCount} 张，失败 ${failedItems.length} 张。请根据提示检查后重试。</p>
+        </div>
+      `;
+      showFeedback(`上传结果：成功 ${successCount} 张，失败 ${failedItems.length} 张。${failedSummary}`, 'error');
+    }
+
     imageCache = null;
     loadImageHistory();
   });
@@ -1442,7 +1488,22 @@ function renderImages() {
   }
 }
 
-function copyUrl(url) {
+async function copyUrl(url) {
+  if (!url) {
+    showFeedback('没有可复制的素材链接。', 'error');
+    return;
+  }
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showFeedback('链接已复制，可以快乐贴图了 ✨', 'success');
+      return;
+    } catch (error) {
+      console.warn('navigator.clipboard failed, falling back to execCommand', error);
+    }
+  }
+
   const textarea = document.createElement('textarea');
   textarea.value = url;
   textarea.style.position = 'fixed';
