@@ -46,12 +46,7 @@
 - `frontend/admin/app.js`
 - `frontend/admin/style.css`
 
-旧文件：
-
-- `frontend/admin/editor.html`
-- `frontend/admin/images.html`
-
-属于遗留参考实现，不应继续作为后台主工作流扩展基础。
+此前存在的旧版独立页面（如 `frontend/admin/editor.html`、`frontend/admin/images.html`）已在主线 modal 工作流稳定后清理移除。
 
 ---
 
@@ -78,9 +73,7 @@ blog-butterfly-go/
 │   ├── admin/
 │   │   ├── index.html
 │   │   ├── app.js
-│   │   ├── style.css
-│   │   ├── editor.html
-│   │   └── images.html
+│   │   └── style.css
 │   ├── js/config.js
 │   └── Dockerfile
 ├── k8s/

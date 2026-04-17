@@ -18,8 +18,8 @@
 - `frontend/admin/style.css` — active admin layout and component styles
 
 ### Legacy files
-- `frontend/admin/editor.html` — legacy standalone editor page with EasyMDE
-- `frontend/admin/images.html` — legacy standalone image page
+- `frontend/admin/editor.html` — legacy standalone editor page with EasyMDE (historical, removed after modal workflow stabilized)
+- `frontend/admin/images.html` — legacy standalone image page (historical, removed after modal workflow stabilized)
 
 ### Active backend files
 - `backend/controllers/article.go` — article CRUD and status handling
@@ -51,7 +51,7 @@
 **Steps:**
 1. Add a short HTML comment near `#editorModal` noting this is the primary article editor workflow.
 2. Add a short JS comment above `openEditor()` noting legacy `editor.html` is not the mainline.
-3. Do **not** remove legacy files yet.
+3. At that phase, do **not** remove legacy files yet.
 
 **Verification:**
 - Read file and confirm comments exist.
@@ -66,10 +66,10 @@ git commit -m "docs(admin): mark modal editor as active main workflow"
 
 ### Task A2: Inventory reusable legacy editor pieces
 
-**Objective:** Reuse only the parts of `editor.html` that are still valuable, mainly EasyMDE bootstrapping ideas.
+**Objective:** Reuse only the parts of the former `editor.html` implementation that were still valuable, mainly EasyMDE bootstrapping ideas.
 
 **Files:**
-- Read: `frontend/admin/editor.html`
+- Read (historical reference at planning time): `frontend/admin/editor.html`
 - Modify later: `frontend/admin/app.js`
 
 **Steps:**
@@ -691,9 +691,9 @@ If this repo has a frontend deployment pipeline or static asset sync step, run t
 
 # Rollout notes
 
-1. Keep `editor.html` and `images.html` as legacy fallbacks during implementation.
+1. During implementation, `editor.html` and `images.html` could be kept temporarily as legacy fallbacks.
 2. Do not expose a second article editing route.
-3. After the new modal workflow is stable, consider a later cleanup PR to retire legacy editor pages.
+3. After the new modal workflow is stable, retire legacy editor pages in a cleanup PR.
 4. Because the user workflow requires Git commits before deployment, implementation should finish with:
 
 ```bash

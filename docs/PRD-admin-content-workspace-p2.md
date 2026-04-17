@@ -32,9 +32,9 @@
    - 编辑字段仍挂载在 `#editContent` 上，但已由 `initMarkdownEditor()` 初始化为 EasyMDE
    - 当前支持 Markdown 编辑、预览、side-by-side、fullscreen 与工具栏操作
    - 已支持 `Ctrl/Cmd + S` 快捷保存
-3. **存在旧版独立编辑页遗留**
-   - `frontend/admin/editor.html` 中也接入了 EasyMDE
-   - 但当前主后台已在 `index.html` 主流程内具备编辑能力，旧页仅应视为遗留参考
+3. **旧版独立编辑页已完成下线清理**
+   - 早期曾存在独立 `editor.html` 遗留实现
+   - 在主后台 `index.html` modal 编辑流稳定后，旧页已移除，避免双实现长期并存
 4. **图床已有良好基础能力**
    - 支持上传、加载图片列表、复制链接、批量删除
    - 已有图片缓存 `imageCache`
