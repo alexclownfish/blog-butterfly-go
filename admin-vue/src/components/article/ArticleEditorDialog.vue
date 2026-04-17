@@ -5,8 +5,8 @@
     width="1080px"
     destroy-on-close
     class="article-editor-dialog"
+    :before-close="handleBeforeDialogClose"
     @open="handleOpen"
-    @close="handleClose"
   >
     <div ref="dialogBodyRef" v-loading="detailLoading" class="editor-body">
       <el-alert
@@ -1000,10 +1000,45 @@ function persistDraftBeforeClose() {
   }
 }
 
-function handleClose() {
-  persistDraftBeforeClose()
+function hasUnsavedChanges() {
+  return serverSaveState.value !== 'saved' && (localDraftState.value === 'dirty' || autosaveTimer.value !== null)
+}
+
+function closeDialog() {
   dialogOpened.value = false
   emit('update:modelValue', false)
+}
+
+async function handleBeforeDialogClose(done: () => void) {
+  if (!hasUnsavedChanges()) {
+    closeDialog()
+    done()
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      '当前还有未同步到服务器的改动。继续关闭后会保留本地草稿，下次打开可恢复。',
+      '保留本地草稿后关闭？',
+      {
+        type: 'warning',
+        confirmButtonText: '继续关闭',
+        cancelButtonText: '取消关闭',
+        distinguishCancelAndClose: true
+      }
+    )
+  } catch {
+    return
+  }
+
+  persistDraftBeforeClose()
+  closeDialog()
+  done()
+}
+
+function handleClose() {
+  persistDraftBeforeClose()
+  closeDialog()
 }
 
 watch(

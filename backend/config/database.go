@@ -62,8 +62,9 @@ func initDefaultAdmin() {
 	}
 
 	user = models.User{
-		Username: username,
-		Password: string(hashedPassword),
+		Username:            username,
+		Password:            string(hashedPassword),
+		ForcePasswordChange: true,
 	}
 	if err := DB.Create(&user).Error; err != nil {
 		log.Printf("默认管理员创建失败: %v", err)

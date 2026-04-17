@@ -29,7 +29,8 @@ type Tag struct {
 }
 
 type User struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
-	Username string `json:"username" gorm:"size:50;unique"`
-	Password string `json:"-" gorm:"size:200"`
+	ID                  uint   `json:"id" gorm:"primaryKey"`
+	Username            string `json:"username" gorm:"size:50;unique"`
+	Password            string `json:"-" gorm:"size:200"`
+	ForcePasswordChange bool   `json:"force_password_change" gorm:"default:false"`
 }

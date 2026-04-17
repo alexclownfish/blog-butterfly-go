@@ -34,6 +34,7 @@ func SetupRoutes(r *gin.Engine) {
 		// 需要认证的接口
 		auth := api.Group("", middleware.AuthMiddleware())
 		{
+			auth.POST("/change-password", controllers.ChangePassword)
 			auth.POST("/articles", controllers.CreateArticle)
 			auth.PUT("/articles/:id", controllers.UpdateArticle)
 			auth.DELETE("/articles/:id", controllers.DeleteArticle)

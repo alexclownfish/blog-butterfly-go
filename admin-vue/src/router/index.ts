@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getToken } from '@/utils/auth'
+import { useAuthStore } from '@/stores/auth'
+
+const changePasswordPath = '/change-password'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -11,6 +13,15 @@ const router = createRouter({
       meta: {
         guestOnly: true,
         title: '登录'
+      }
+    },
+    {
+      path: changePasswordPath,
+      name: 'change-password',
+      component: () => import('@/views/login/ChangePasswordView.vue'),
+      meta: {
+        requiresAuth: true,
+        title: '修改密码'
       }
     },
     {
@@ -46,15 +57,20 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = getToken()
-  const isLoggedIn = Boolean(token)
+  const authStore = useAuthStore()
+  const isLoggedIn = Boolean(authStore.token)
+  const forcePasswordChange = authStore.forcePasswordChange
 
   if (to.meta.requiresAuth && !isLoggedIn) {
     return '/login'
   }
 
+  if (forcePasswordChange && isLoggedIn && to.path !== changePasswordPath) {
+    return changePasswordPath
+  }
+
   if (to.meta.guestOnly && isLoggedIn) {
-    return '/dashboard'
+    return forcePasswordChange ? changePasswordPath : '/dashboard'
   }
 
   return true
