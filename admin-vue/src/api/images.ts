@@ -1,5 +1,5 @@
 import client from './client'
-import type { ImageAsset, ImageListResponse, ImageUploadResponse } from '@/types/image'
+import type { ImageAsset, ImageDeleteResponse, ImageListResponse, ImageUploadResponse } from '@/types/image'
 
 function normalizeImageAsset(item: Partial<ImageAsset> | null | undefined): ImageAsset | null {
   const url = typeof item?.url === 'string' ? item.url.trim() : ''
@@ -35,4 +35,11 @@ export async function uploadImageApi(file: File): Promise<string> {
   })
 
   return typeof data?.url === 'string' ? data.url.trim() : ''
+}
+
+export async function deleteImageApi(key: string): Promise<string> {
+  const encodedKey = encodeURIComponent(key.trim())
+  const { data } = await client.delete<ImageDeleteResponse>(`/images/${encodedKey}`)
+
+  return typeof data?.message === 'string' ? data.message.trim() : ''
 }

@@ -16,3 +16,8 @@ export interface ImageUploadResponse {
   message?: string
   error?: string
 }
+
+export interface ImageDeleteResponse {
+  message?: string
+  error?: string
+}

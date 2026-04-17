@@ -274,18 +274,18 @@
       />
 
       <div v-else class="image-grid">
-        <button
+        <div
           v-for="image in filteredImages"
           :key="image.key || image.url"
-          type="button"
           class="image-card"
-          @click="applyImageSelection(image)"
         >
-          <el-image :src="image.url" fit="cover" class="image-card__image" lazy>
-            <template #error>
-              <div class="image-card__fallback">图片加载失败</div>
-            </template>
-          </el-image>
+          <button type="button" class="image-card__select" @click="applyImageSelection(image)">
+            <el-image :src="image.url" fit="cover" class="image-card__image" lazy>
+              <template #error>
+                <div class="image-card__fallback">图片加载失败</div>
+              </template>
+            </el-image>
+          </button>
           <div class="image-card__meta">
             <div class="image-card__key">{{ image.key || '未命名素材' }}</div>
             <div class="image-card__url">{{ image.url }}</div>
@@ -293,8 +293,30 @@
               <span>{{ formatFileSize(image.size) }}</span>
               <span>{{ formatImageTime(image.time) }}</span>
             </div>
+            <div class="image-card__actions">
+              <el-button size="small" type="primary" @click="applyImageSelection(image)">使用</el-button>
+              <el-button size="small" @click="handleCopyImageUrl(image)">复制 URL</el-button>
+              <el-button
+                v-if="imagePickerMode === 'markdown'"
+                size="small"
+                type="success"
+                plain
+                @click="applyImageSelection(image, { alsoSetCover: true })"
+              >
+                插入正文并设封面
+              </el-button>
+              <el-button
+                size="small"
+                text
+                type="danger"
+                :disabled="!image.key"
+                @click="handleDeleteImage(image)"
+              >
+                删除
+              </el-button>
+            </div>
           </div>
-        </button>
+        </div>
       </div>
     </div>
   </el-dialog>
@@ -302,12 +324,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules, UploadFile, UploadFiles } from 'element-plus'
 import { marked } from 'marked'
 
 import { fetchArticleDetailApi, createArticleApi, updateArticleApi } from '@/api/articles'
-import { fetchImagesApi, uploadImageApi } from '@/api/images'
+import { fetchImagesApi, uploadImageApi, deleteImageApi } from '@/api/images'
 import type { ArticleEditorForm } from '@/types/article'
 import { createDefaultArticleForm } from '@/types/article'
 import type { Category } from '@/types/category'
@@ -328,6 +350,9 @@ type PreviewMode = 'edit' | 'split' | 'preview'
 type LocalDraftState = 'clean' | 'dirty' | 'saving' | 'saved' | 'error' | 'restored'
 type ServerSaveState = 'idle' | 'saving' | 'saved' | 'error'
 type ImagePickerMode = 'cover' | 'markdown'
+interface ImageSelectionOptions {
+  alsoSetCover?: boolean
+}
 
 const AUTOSAVE_DELAY = 1200
 const NEW_ARTICLE_DRAFT_KEY = 'admin-vue:article-editor:new'
@@ -768,6 +793,40 @@ function openImagePicker(mode: ImagePickerMode) {
   void ensureImagesLoaded()
 }
 
+async function copyTextToClipboard(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', 'true')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.focus()
+  textarea.select()
+
+  try {
+    const successful = document.execCommand('copy')
+    if (!successful) {
+      throw new Error('浏览器未允许复制到剪贴板')
+    }
+  } finally {
+    document.body.removeChild(textarea)
+  }
+}
+
+async function handleCopyImageUrl(image: ImageAsset) {
+  try {
+    await copyTextToClipboard(image.url)
+    ElMessage.success('图片 URL 已复制')
+  } catch (error: any) {
+    ElMessage.error(error?.message || '复制图片 URL 失败')
+  }
+}
+
 function insertMarkdownImage(url: string, alt = '图片描述') {
   const textarea = contentTextareaRef.value
   const snippet = `![${alt}](${url})`
@@ -792,16 +851,59 @@ function insertMarkdownImage(url: string, alt = '图片描述') {
   })
 }
 
-function applyImageSelection(image: ImageAsset) {
+function applyImageSelection(image: ImageAsset, options: ImageSelectionOptions = {}) {
+  const alsoSetCover = Boolean(options.alsoSetCover)
+
   if (imagePickerMode.value === 'cover') {
     form.cover_image = image.url
     ElMessage.success('已设置为封面图')
   } else {
     insertMarkdownImage(image.url, image.key || '图片描述')
-    ElMessage.success('已插入 Markdown 图片')
+
+    if (alsoSetCover) {
+      form.cover_image = image.url
+      ElMessage.success('已插入 Markdown 图片，并同步设为封面图')
+    } else {
+      ElMessage.success('已插入 Markdown 图片')
+    }
   }
 
   imagePickerVisible.value = false
+}
+
+async function handleDeleteImage(image: ImageAsset) {
+  const key = image.key?.trim()
+  if (!key) {
+    ElMessage.warning('该图片缺少 key，暂时无法删除')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定删除图片「${key}」吗？删除后将无法恢复。`,
+      '删除图片',
+      {
+        type: 'warning',
+        confirmButtonText: '删除',
+        cancelButtonText: '取消'
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    const message = await deleteImageApi(key)
+    images.value = images.value.filter((item) => item.key !== key)
+    ElMessage.success(message || '图片已删除')
+  } catch (error: any) {
+    ElMessage.error(
+      error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        '删除图片失败'
+    )
+  }
 }
 
 async function handleSubmit() {
@@ -1239,13 +1341,10 @@ onBeforeUnmount(() => {
 }
 
 .image-card {
-  padding: 0;
   border: 1px solid var(--el-border-color-light);
   border-radius: 14px;
   overflow: hidden;
   background: var(--el-bg-color);
-  text-align: left;
-  cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
@@ -1253,6 +1352,15 @@ onBeforeUnmount(() => {
   transform: translateY(-2px);
   border-color: var(--el-color-primary-light-5);
   box-shadow: 0 10px 24px rgb(0 0 0 / 10%);
+}
+
+.image-card__select {
+  width: 100%;
+  padding: 0;
+  border: none;
+  display: block;
+  background: transparent;
+  cursor: pointer;
 }
 
 .image-card__image {
@@ -1297,6 +1405,13 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+}
+
+.image-card__actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .dialog-footer {
