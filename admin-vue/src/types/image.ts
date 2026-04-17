@@ -10,3 +10,9 @@ export interface ImageListResponse {
   message?: string
   error?: string
 }
+
+export interface ImageUploadResponse {
+  url?: string
+  message?: string
+  error?: string
+}

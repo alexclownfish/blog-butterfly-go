@@ -1,5 +1,5 @@
 import client from './client'
-import type { ImageAsset, ImageListResponse } from '@/types/image'
+import type { ImageAsset, ImageListResponse, ImageUploadResponse } from '@/types/image'
 
 function normalizeImageAsset(item: Partial<ImageAsset> | null | undefined): ImageAsset | null {
   const url = typeof item?.url === 'string' ? item.url.trim() : ''
@@ -22,4 +22,17 @@ export async function fetchImagesApi(): Promise<ImageAsset[]> {
   return list
     .map((item) => normalizeImageAsset(item))
     .filter((item): item is ImageAsset => Boolean(item))
+}
+
+export async function uploadImageApi(file: File): Promise<string> {
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const { data } = await client.post<ImageUploadResponse>('/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+
+  return typeof data?.url === 'string' ? data.url.trim() : ''
 }

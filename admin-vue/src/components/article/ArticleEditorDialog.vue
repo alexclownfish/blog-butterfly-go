@@ -241,9 +241,22 @@
           class="image-picker__search"
         />
         <div class="image-picker__toolbar-actions">
+          <el-upload
+            :show-file-list="false"
+            :auto-upload="false"
+            accept="image/*"
+            :disabled="imageUploading"
+            :on-change="handleImageUploadChange"
+          >
+            <el-button type="primary" :loading="imageUploading">上传图片</el-button>
+          </el-upload>
           <el-button @click="refreshImages">刷新</el-button>
           <el-button text @click="imagePickerVisible = false">关闭</el-button>
         </div>
+      </div>
+
+      <div class="image-picker__tips">
+        <span>支持上传后自动刷新素材列表，并直接用于当前封面/正文插入。</span>
       </div>
 
       <el-alert
@@ -290,11 +303,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import type { FormInstance, FormRules } from 'element-plus'
+import type { FormInstance, FormRules, UploadFile, UploadFiles } from 'element-plus'
 import { marked } from 'marked'
 
 import { fetchArticleDetailApi, createArticleApi, updateArticleApi } from '@/api/articles'
-import { fetchImagesApi } from '@/api/images'
+import { fetchImagesApi, uploadImageApi } from '@/api/images'
 import type { ArticleEditorForm } from '@/types/article'
 import { createDefaultArticleForm } from '@/types/article'
 import type { Category } from '@/types/category'
@@ -348,6 +361,7 @@ const currentDraftExists = ref(false)
 const imagePickerVisible = ref(false)
 const imagePickerMode = ref<ImagePickerMode>('cover')
 const imageLoading = ref(false)
+const imageUploading = ref(false)
 const imageError = ref('')
 const imageSearch = ref('')
 const images = ref<ImageAsset[]>([])
@@ -698,6 +712,53 @@ async function ensureImagesLoaded(force = false) {
 
 async function refreshImages() {
   await ensureImagesLoaded(true)
+}
+
+async function handleImageUpload(file: File) {
+  imageUploading.value = true
+  imageError.value = ''
+
+  try {
+    const uploadedUrl = await uploadImageApi(file)
+    if (!uploadedUrl) {
+      throw new Error('上传成功，但未返回图片地址')
+    }
+
+    await refreshImages()
+    const uploadedImage = images.value.find((image) => image.url === uploadedUrl)
+
+    if (uploadedImage) {
+      applyImageSelection(uploadedImage)
+    } else {
+      if (imagePickerMode.value === 'cover') {
+        form.cover_image = uploadedUrl
+        ElMessage.success('图片上传成功，已设置为封面图')
+      } else {
+        insertMarkdownImage(uploadedUrl, file.name.replace(/\.[^.]+$/, '') || '图片描述')
+        ElMessage.success('图片上传成功，已插入 Markdown 图片')
+      }
+      imagePickerVisible.value = false
+    }
+  } catch (error: any) {
+    imageError.value =
+      error?.response?.data?.error ||
+      error?.response?.data?.message ||
+      error?.message ||
+      '上传图片失败'
+    ElMessage.error(imageError.value)
+  } finally {
+    imageUploading.value = false
+  }
+}
+
+function handleImageUploadChange(uploadFile: UploadFile, _uploadFiles: UploadFiles) {
+  const rawFile = uploadFile.raw
+  if (!rawFile) {
+    ElMessage.warning('未读取到待上传文件')
+    return
+  }
+
+  void handleImageUpload(rawFile)
 }
 
 function openImagePicker(mode: ImagePickerMode) {
@@ -1158,6 +1219,13 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.image-picker__tips {
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .image-picker__alert {
