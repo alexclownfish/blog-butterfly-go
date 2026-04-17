@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>内容后台 | Alexcld Admin</title>
+  <title>内容管理后台 | Alexcld CMS</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -16,8 +16,8 @@
       <div class="sidebar-brand">
         <div class="brand-mark">A</div>
         <div>
-          <strong>Alexcld Admin</strong>
-          <span>children don't lie</span>
+          <strong>Alexcld CMS</strong>
+          <span>内容管理后台</span>
         </div>
       </div>
 
@@ -25,17 +25,17 @@
         <div class="sidebar-label">导航</div>
         <a href="#" onclick="showPage('articles', this); return false;" class="active">📄 文章管理</a>
         <a href="#" onclick="showPage('categories', this); return false;">📁 分类管理</a>
-        <a href="#" onclick="showPage('images', this); return false;">🖼️ 图床管理</a>
+        <a href="#" onclick="showPage('images', this); return false;">🖼️ 素材管理</a>
       </div>
 
       <div class="sidebar-footnote">
         <div class="foot-card">
-          <small>后台风格</small>
-          <strong>Modern Glass Control</strong>
+          <small>工作台风格</small>
+          <strong>现代玻璃化工作台</strong>
         </div>
         <div class="foot-card">
-          <small>数据驱动</small>
-          <strong>API / Token / CRUD</strong>
+          <small>核心能力</small>
+          <strong>内容发布 / 分类维护 / 素材管理</strong>
         </div>
       </div>
     </aside>
@@ -43,13 +43,13 @@
     <div class="main-area">
       <header class="header">
         <div>
-          <div class="header-eyebrow">🛸 Content operations hub</div>
-          <h1>内容运营中心</h1>
-          <p>文章、分类、图床在这里统一调度。UI 升级了，但业务逻辑还是那个靠谱老搭档。</p>
+          <div class="header-eyebrow">🛸 Content management hub</div>
+          <h1>内容管理后台</h1>
+          <p>统一处理文章发布、分类维护与素材管理，围绕内容生产与运营效率设计，保留既有接口与操作逻辑。</p>
         </div>
 
         <div class="header-actions">
-          <div class="status-pill">在线控制台</div>
+          <div class="status-pill">系统在线</div>
           <button class="ghost-btn" onclick="logout()">退出登录</button>
         </div>
       </header>
@@ -79,7 +79,7 @@
     <div class="modal-card">
       <div class="modal-header">
         <div>
-          <div class="modal-eyebrow">✦ Article workspace</div>
+          <div class="modal-eyebrow">✦ 文章编辑工作台</div>
           <h3 id="editorTitle">新建文章</h3>
         </div>
         <button class="icon-btn" onclick="closeEditor()" aria-label="关闭">✕</button>
@@ -163,7 +163,7 @@
     <div class="modal-card image-picker-card">
       <div class="modal-header">
         <div>
-          <div class="modal-eyebrow">✦ Image picker</div>
+          <div class="modal-eyebrow">✦ 素材库选择器</div>
           <h3>图床素材选择器</h3>
           <p id="imagePickerModeText" class="image-picker-tip">请选择一张图片进行操作</p>
         </div>

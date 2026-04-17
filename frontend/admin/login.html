@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>登录 | Alexcld Admin</title>
-  <meta name="description" content="Alexcld 博客后台登录">
+  <title>登录 | Alexcld CMS</title>
+  <meta name="description" content="Alexcld 内容管理后台登录页">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -309,43 +309,43 @@
         <div class="brand">
           <div class="brand-mark">A</div>
           <div class="brand-copy">
-            <strong>Alexcld Admin</strong>
-            <span>children don't lie · control center</span>
+            <strong>Alexcld CMS</strong>
+            <span>内容管理后台</span>
           </div>
         </div>
 
         <div style="margin-top: 54px;">
-          <div class="eyebrow">🛸 后台管理指挥舱</div>
-          <h1>登录后，把博客宇宙重新排队。</h1>
-          <p>文章、分类、图床都在这里统一调度。界面换了新皮肤，但登录接口、token 逻辑和后台功能还是原班人马，没有偷偷把发动机换成拖拉机。</p>
+          <div class="eyebrow">🛸 内容管理平台</div>
+          <h1>登录后，统一管理你的站点内容。</h1>
+          <p>文章、分类与素材资源都在这里集中管理。界面升级不影响现有登录接口、Token 机制与后台能力，方便你继续稳定运营内容。</p>
           <div class="hero-grid">
             <div class="hero-stat">
-              <small>模块</small>
-              <strong>文章 / 分类 / 图床</strong>
+              <small>核心模块</small>
+              <strong>文章 / 分类 / 素材</strong>
             </div>
             <div class="hero-stat">
-              <small>登录方式</small>
+              <small>身份校验</small>
               <strong>JWT Token</strong>
             </div>
             <div class="hero-stat">
-              <small>风格</small>
-              <strong>现代深色玻璃风</strong>
+              <small>界面体验</small>
+              <strong>现代玻璃化控制台</strong>
             </div>
           </div>
         </div>
       </div>
 
       <div class="hero-footer">
-        <span class="hero-chip">✦ 统一前后台视觉</span>
-        <span class="hero-chip">✦ 保留原有 API</span>
-        <span class="hero-chip">✦ 少改逻辑，多改气质</span>
+        <span class="hero-chip">✦ 统一内容运营入口</span>
+        <span class="hero-chip">✦ 保留既有 API 能力</span>
+        <span class="hero-chip">✦ 聚焦内容生产效率</span>
       </div>
     </section>
 
     <section class="login-card">
       <div class="login-head">
-        <h2>后台登录</h2>
-        <p>欢迎回来，输入账号密码，进入管理台继续折腾内容宇宙。</p>
+        <h2>登录内容后台</h2>
+        <p>欢迎回来，请输入账号与密码，进入内容管理后台继续处理站点运营工作。</p>
       </div>
 
       <div class="field">
@@ -358,11 +358,11 @@
         <input type="password" id="password" placeholder="请输入密码" autocomplete="current-password">
       </div>
 
-      <button class="submit" id="loginBtn" onclick="login()">进入指挥舱</button>
+      <button class="submit" id="loginBtn" onclick="login()">进入管理后台</button>
 
       <div class="meta">
-        <span>children don't lie</span>
-        <span>Alexcld Admin</span>
+        <span>内容管理后台</span>
+        <span>Alexcld CMS</span>
       </div>
 
       <div class="error" id="error"></div>
@@ -385,7 +385,7 @@
       const loginBtn = document.getElementById('loginBtn');
 
       if (!username || !password) {
-        setError('用户名和密码都要填，不然后台认不出自己人。');
+        setError('请输入用户名和密码后再登录。');
         return;
       }
 
@@ -405,13 +405,13 @@
           localStorage.setItem('token', data.token);
           location.href = '/admin/';
         } else {
-          setError(data.error || '登录失败，请检查账号密码。');
+          setError(data.error || '登录失败，请检查账号密码后重试。');
         }
       } catch (error) {
-        setError('网络错误，后台大门暂时卡了一下。');
+        setError('网络异常，暂时无法连接内容后台。');
       } finally {
         loginBtn.disabled = false;
-        loginBtn.textContent = '进入指挥舱';
+        loginBtn.textContent = '进入管理后台';
       }
     }
 

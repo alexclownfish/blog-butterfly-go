@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>图床管理</title>
+  <title>素材管理 | Alexcld CMS</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     .header { background: #49b1f5; color: white; padding: 15px 20px; }
@@ -18,10 +18,10 @@
   </style>
 </head>
 <body>
-  <div class="header"><h2>图床管理</h2></div>
+  <div class="header"><h2>素材管理</h2></div>
   <div class="container">
     <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-      <p>点击或拖拽上传图片</p>
+      <p>点击或拖拽上传素材图片</p>
       <input type="file" id="fileInput" accept="image/*" onchange="uploadImage(this)">
     </div>
     <div class="image-grid" id="imageList"></div>
@@ -45,7 +45,7 @@
       })
       .then(res => res.json())
       .then(data => {
-        alert('上传成功！URL: ' + data.url);
+        alert('上传成功，素材地址：' + data.url);
         loadImages();
       });
     }

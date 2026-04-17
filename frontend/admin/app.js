@@ -109,7 +109,7 @@ async function refreshRandomCover() {
     await ensureImageCache();
     const randomUrl = pickRandomCoverUrl();
     if (!randomUrl) {
-      showFeedback('当前图床没有可用图片，暂时换不了新封面。', 'error');
+      showFeedback('当前素材库暂无可用图片，暂时无法更换封面。', 'error');
       return;
     }
     applyCoverValue(randomUrl);
@@ -348,9 +348,9 @@ function loadArticlesPage() {
     <section class="card section-card">
       <div class="section-head">
         <div>
-          <div class="section-kicker">✦ Content desk</div>
+          <div class="section-kicker">✦ 文章中心</div>
           <h3>文章管理</h3>
-          <p>支持按状态、分类和关键词筛选，告别在列表里徒手捞针。</p>
+          <p>支持按状态、分类与关键词筛选，帮助你更高效地定位与管理内容。</p>
         </div>
         <button class="btn btn-primary" onclick="openEditor()">+ 新建文章</button>
       </div>
@@ -463,7 +463,7 @@ async function loadArticles() {
 
     if (!articles.length) {
       renderArticlePagination();
-      list.innerHTML = renderStateCard('这里暂时没有符合条件的文章，像冰箱里只剩下一根葱。', 'empty');
+      list.innerHTML = renderStateCard('当前筛选条件下暂无文章内容。', 'empty');
       return;
     }
 
@@ -534,7 +534,7 @@ async function deleteArticle(id) {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });
-    showFeedback('文章删除成功', 'success');
+    showFeedback('文章已删除', 'success');
     renderArticlesLoading('正在刷新文章列表...');
     await loadArticles();
   } catch (error) {
@@ -597,7 +597,7 @@ function initMarkdownEditor() {
         name: 'image-library',
         action: () => openImagePicker('markdown'),
         className: 'fa fa-picture-o',
-        title: '从图床插入图片'
+        title: '从素材库插入图片'
       },
       '|',
       'preview',
@@ -650,8 +650,8 @@ function openImagePicker(mode) {
   const tip = document.getElementById('imagePickerModeText');
   if (tip) {
     tip.textContent = mode === 'cover'
-      ? '当前操作：选择封面图，点一下就会回填到封面输入框。'
-      : '当前操作：插入正文配图，点一下就会插入到当前光标位置。';
+      ? '当前操作：选择封面图，点击后会自动回填到封面输入框。'
+      : '当前操作：插入正文配图，点击后会插入到当前光标位置。';
   }
 
   if (modal) modal.style.display = 'block';
@@ -676,7 +676,7 @@ function renderImagePicker() {
 
   const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
   if (!images.length) {
-    grid.innerHTML = renderStateCard('图床里还没有图片，先去上传两张，再来让编辑器吃饱。', 'empty');
+    grid.innerHTML = renderStateCard('素材库中暂无图片，请先上传素材后再进行选择。', 'empty');
     return;
   }
 
@@ -836,15 +836,15 @@ function maybeRestoreDraft() {
   const isDraftNewerThanServer = !serverUpdatedAt || Number.isNaN(serverUpdatedAt.getTime()) || draftUpdatedAt >= serverUpdatedAt;
 
   let message = editingId
-    ? `检测到本地草稿（${formatTimeLabel(draftUpdatedAt)}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
-    : `检测到未完成的新文章草稿（${formatTimeLabel(draftUpdatedAt)}）。\n要恢复它吗？`;
+    ? `检测到本地草稿（${formatTimeLabel(draftUpdatedAt)}）。\n是否恢复本地草稿？选择“取消”将继续使用服务器版本。`
+    : `检测到未完成的新文章草稿（${formatTimeLabel(draftUpdatedAt)}）。\n是否恢复该草稿？`;
 
   if (editingId && hasServerTimestamp) {
     const serverLabel = formatTimeLabel(serverUpdatedAt);
     const draftLabel = formatTimeLabel(draftUpdatedAt);
     message = isDraftNewerThanServer
-      ? `检测到较新的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n恢复本地草稿？选择“取消”将继续使用服务器内容。`
-      : `检测到较旧的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n仍要恢复它吗？选择“取消”将继续使用服务器内容。`;
+      ? `检测到较新的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n是否恢复本地草稿？选择“取消”将继续使用服务器版本。`
+      : `检测到较旧的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n仍要恢复该草稿吗？选择“取消”将继续使用服务器版本。`;
   }
 
   const shouldRestore = confirm(message);
@@ -942,7 +942,7 @@ function discardEditorDraft() {
   const hasUnsavedChanges = editorDirty || autosaveTimer;
 
   if (!hasLocalDraft && !hasUnsavedChanges) {
-    showFeedback('现在没有可丢弃的草稿，编辑器今天很乖。', 'info');
+    showFeedback('当前没有可放弃的本地草稿。', 'info');
     return;
   }
 
@@ -977,7 +977,7 @@ function discardEditorDraft() {
   if (randomCover) applyCoverValue(randomCover);
   updateEditorStats(getEditorContent());
   setEditorSaveState('idle', '本地草稿已放弃');
-  showFeedback('草稿已放弃，编辑器已清空，可以重新开写啦。', 'success');
+  showFeedback('草稿已放弃，编辑器内容已清空。', 'success');
 }
 
 function closeEditor() {
@@ -1086,7 +1086,7 @@ async function saveArticle() {
       isEditing
         ? '文章更新成功'
         : data.status === 'draft'
-          ? '草稿创建成功，已自动切到草稿列表并帮你定位标题。'
+          ? '草稿创建成功，已自动切换到草稿列表并定位到对应文章。'
           : '文章创建成功',
       'success'
     );
@@ -1109,9 +1109,9 @@ function loadCategoriesPage() {
     <section class="card section-card">
       <div class="section-head">
         <div>
-          <div class="section-kicker">✦ Taxonomy desk</div>
+          <div class="section-kicker">✦ 分类中心</div>
           <h3>分类管理</h3>
-          <p>给内容宇宙分组排班，别让文章在后台里流浪。</p>
+          <p>集中维护内容分类结构，帮助文章更清晰地归档与检索。</p>
         </div>
       </div>
 
@@ -1142,7 +1142,7 @@ async function loadCategories() {
     list.innerHTML = '';
 
     if (!categories.length) {
-      list.innerHTML = renderStateCard('还没有分类，快先建一个，不然后台像没贴标签的快递站。', 'empty');
+      list.innerHTML = renderStateCard('当前还没有分类，请先新增分类。', 'empty');
       return;
     }
 
@@ -1277,16 +1277,16 @@ function loadImagesPage() {
     <section class="card section-card">
       <div class="section-head">
         <div>
-          <div class="section-kicker">✦ Media desk</div>
-          <h3>图床管理</h3>
-          <p>支持拖拽上传、多图管理和批量删除，别让图片在仓库里野蛮生长。</p>
+          <div class="section-kicker">✦ 素材中心</div>
+          <h3>素材管理</h3>
+          <p>支持拖拽上传、多图管理与批量删除，帮助你统一维护内容素材资源。</p>
         </div>
       </div>
 
       <div id="uploadArea" class="upload-dropzone">
         <div class="upload-emoji">🖼️</div>
         <h4>点击或拖拽图片到这里上传</h4>
-        <p>支持多图上传，传完就能复制链接去写文章。</p>
+        <p>支持多图上传，上传完成后可直接复制链接用于文章内容编辑。</p>
         <input type="file" id="imgFile" accept="image/*" multiple style="display:none">
       </div>
 
@@ -1294,7 +1294,7 @@ function loadImagesPage() {
 
       <div class="images-headline">
         <h4>图片列表</h4>
-        <p>支持选中后批量删除，也可以逐个复制链接。</p>
+        <p>支持批量删除与逐个复制链接，便于统一管理素材。</p>
       </div>
 
       <div id="imageHistory"></div>
@@ -1346,7 +1346,7 @@ function uploadMultiple(files) {
     result.innerHTML = `
       <div class="upload-status-card success">
         <strong>上传完成</strong>
-        <p>✅ 已成功上传 ${files.length} 张图片，现在可以去文章里贴图了。</p>
+        <p>✅ 已成功上传 ${files.length} 张图片，可直接用于封面或正文配图。</p>
       </div>
     `;
     imageCache = null;
@@ -1364,8 +1364,8 @@ function toggleSelect(key) {
 }
 
 function deleteSelected() {
-  if (selectedImages.length === 0) return alert('请选择要删除的图片');
-  if (!confirm(`确定删除 ${selectedImages.length} 张图片？`)) return;
+  if (selectedImages.length === 0) return alert('请先选择要删除的图片');
+  if (!confirm(`确认删除 ${selectedImages.length} 张图片？`)) return;
 
   Promise.all(selectedImages.map((key) =>
     fetch(`${API}/images/${key}`, {
@@ -1388,7 +1388,7 @@ function renderImages() {
   if (currentImagePage > total) currentImagePage = total;
 
   if (!allImages.length) {
-    list.innerHTML = renderStateCard('图片库还是空的，连一张表情包都没有。', 'empty');
+    list.innerHTML = renderStateCard('当前素材库为空，请先上传图片。', 'empty');
     return;
   }
 
@@ -1453,7 +1453,7 @@ function copyUrl(url) {
     document.execCommand('copy');
     showFeedback('链接已复制，可以快乐贴图了 ✨', 'success');
   } catch (err) {
-    showFeedback('复制失败，请手动复制链接', 'error');
+    showFeedback('复制失败，请手动复制素材链接。', 'error');
   }
   document.body.removeChild(textarea);
 }
