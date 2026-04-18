@@ -170,6 +170,19 @@
         <button class="icon-btn" onclick="closeImagePicker()" aria-label="关闭">✕</button>
       </div>
 
+      <div class="image-picker-toolbar">
+        <label class="field compact-field image-picker-search">
+          <span>搜索素材</span>
+          <input
+            type="text"
+            id="imagePickerSearch"
+            placeholder="按链接、文件名、key 过滤素材"
+            oninput="handleImagePickerSearch(this.value)"
+          >
+        </label>
+        <div id="imagePickerResultMeta" class="image-picker-result-meta">共 0 张素材</div>
+      </div>
+
       <div id="imagePickerGrid" class="image-picker-grid"></div>
 
       <div class="modal-actions">

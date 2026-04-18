@@ -21,6 +21,7 @@ let autosaveTimer = null;
 let editorDirty = false;
 let isSavingArticle = false;
 let imagePickerMode = null;
+let imagePickerKeyword = '';
 let suppressAutosave = false;
 let currentEditorDraftKey = null;
 let currentServerArticleUpdatedAt = null;
@@ -646,13 +647,17 @@ function insertMarkdownImage(url, altText = '图片描述') {
 
 function openImagePicker(mode) {
   imagePickerMode = mode;
+  imagePickerKeyword = '';
   const modal = getImagePickerModal();
   const tip = document.getElementById('imagePickerModeText');
+  const searchInput = getImagePickerSearchElement();
   if (tip) {
     tip.textContent = mode === 'cover'
       ? '当前操作：选择封面图，点击后会自动回填到封面输入框。'
       : '当前操作：插入正文配图，点击后会插入到当前光标位置。';
   }
+  if (searchInput) searchInput.value = '';
+  setImagePickerResultMeta('正在加载素材...');
 
   if (modal) modal.style.display = 'block';
 
@@ -661,12 +666,17 @@ function openImagePicker(mode) {
     .catch((error) => {
       const grid = document.getElementById('imagePickerGrid');
       if (grid) grid.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+      setImagePickerResultMeta('素材加载失败');
     });
 }
 
 function closeImagePicker() {
   imagePickerMode = null;
+  imagePickerKeyword = '';
   const modal = getImagePickerModal();
+  const searchInput = getImagePickerSearchElement();
+  if (searchInput) searchInput.value = '';
+  setImagePickerResultMeta('共 0 张素材');
   if (modal) modal.style.display = 'none';
 }
 
@@ -674,9 +684,22 @@ function renderImagePicker() {
   const grid = document.getElementById('imagePickerGrid');
   if (!grid) return;
 
-  const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
-  if (!images.length) {
+  const allImages = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  const images = getFilteredImagePickerItems();
+  if (!allImages.length) {
+    setImagePickerResultMeta('共 0 张素材');
     grid.innerHTML = renderStateCard('素材库中暂无图片，请先上传素材后再进行选择。', 'empty');
+    return;
+  }
+
+  setImagePickerResultMeta(
+    imagePickerKeyword
+      ? `已筛出 ${images.length} / ${allImages.length} 张素材`
+      : `共 ${allImages.length} 张素材`
+  );
+
+  if (!images.length) {
+    grid.innerHTML = renderStateCard(`没有匹配“${escapeHtml(imagePickerKeyword)}”的素材，换个关键词试试。`, 'empty');
     return;
   }
 
@@ -692,6 +715,41 @@ function decodeHtmlEntities(value) {
   const textarea = document.createElement('textarea');
   textarea.innerHTML = value;
   return textarea.value;
+}
+
+function getImagePickerSearchElement() {
+  return document.getElementById('imagePickerSearch');
+}
+
+function setImagePickerResultMeta(text) {
+  const element = document.getElementById('imagePickerResultMeta');
+  if (element) element.textContent = text;
+}
+
+function getImageSearchTokens(item = {}) {
+  return [
+    item.url,
+    item.name,
+    item.filename,
+    item.original_name,
+    item.originalName,
+    item.key,
+    item.path
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+}
+
+function getFilteredImagePickerItems() {
+  const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  const keyword = imagePickerKeyword.trim().toLowerCase();
+  if (!keyword) return images;
+  return images.filter((item) => getImageSearchTokens(item).some((token) => token.includes(keyword)));
+}
+
+function handleImagePickerSearch(value = '') {
+  imagePickerKeyword = String(value || '').trim();
+  renderImagePicker();
 }
 
 function handleImagePick(rawUrl) {

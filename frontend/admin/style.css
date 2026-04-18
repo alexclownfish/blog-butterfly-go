@@ -687,6 +687,32 @@ tr:hover td {
   margin-top: 8px;
 }
 
+.image-picker-toolbar {
+  display: flex;
+  gap: 14px;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.image-picker-search {
+  flex: 1;
+  min-width: min(320px, 100%);
+}
+
+.image-picker-result-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--muted-strong);
+  font-size: 0.9rem;
+}
+
 .image-picker-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
