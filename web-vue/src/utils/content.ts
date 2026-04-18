@@ -31,3 +31,11 @@ export function plainSummary(article: Article) {
 export function articleDetailPath(articleId: number) {
   return `/posts/${articleId}.html`
 }
+
+export function tagPath(tagName: string) {
+  return `/tags/${encodeURIComponent(tagName)}`
+}
+
+export function withFromQuery(path: string, fromPath: string) {
+  return `${path}?from=${encodeURIComponent(fromPath)}`
+}

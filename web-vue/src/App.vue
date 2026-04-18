@@ -8,7 +8,7 @@ const theme = ref<'dark' | 'light'>('dark')
 const themeLabel = computed(() => theme.value === 'dark' ? '暗色流光' : '柔光纸感')
 const themeHint = computed(() => theme.value === 'dark' ? '点击切到明亮模式' : '点击切回暗色模式')
 const themeIcon = computed(() => theme.value === 'dark' ? '🌙' : '☀️')
-const shellMode = computed(() => route.name === 'article-detail' ? 'detail' : 'home')
+const shellMode = computed(() => (route.name === 'article-detail' || route.name === 'tag-detail') ? 'detail' : 'home')
 
 function toggleTheme() {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
@@ -25,7 +25,13 @@ watch(() => route.fullPath, () => {
 
 onMounted(() => {
   const storedTheme = localStorage.getItem('web-vue-theme')
-  if (storedTheme === 'dark' || storedTheme === 'light') theme.value = storedTheme
+  if (storedTheme === 'dark' || storedTheme === 'light') {
+    theme.value = storedTheme
+    return
+  }
+
+  const prefersLight = window.matchMedia?.('(prefers-color-scheme: light)').matches
+  theme.value = prefersLight ? 'light' : 'dark'
 })
 </script>
 
@@ -56,6 +62,7 @@ onMounted(() => {
             </span>
           </button>
           <RouterLink class="pill" to="/">首页</RouterLink>
+          <RouterLink class="pill" to="/tags/运维">标签</RouterLink>
           <a class="pill" href="/categories/">分类</a>
           <a class="pill" href="/archives/">归档</a>
           <a class="pill" href="/about/">博主</a>

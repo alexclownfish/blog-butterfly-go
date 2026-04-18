@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Article, ArticleListResponse, CategoryListResponse } from '@/types/content'
+import type { Article, ArticleListResponse, CategoryListResponse, TagListResponse } from '@/types/content'
 
 export interface FetchArticlesParams {
   page: number
@@ -17,6 +17,11 @@ export async function fetchArticles(params: FetchArticlesParams) {
 
 export async function fetchCategories() {
   const { data } = await apiClient.get<CategoryListResponse>('/categories')
+  return data
+}
+
+export async function fetchTags() {
+  const { data } = await apiClient.get<TagListResponse>('/tags')
   return data
 }
 

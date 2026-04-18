@@ -4,7 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { marked } from 'marked'
 import { fetchArticleDetail, fetchArticles } from '@/api/content'
 import type { Article } from '@/types/content'
-import { articleDetailPath, formatDate, plainSummary, tagsOf } from '@/utils/content'
+import { articleDetailPath, formatDate, plainSummary, tagPath, tagsOf } from '@/utils/content'
 
 const route = useRoute()
 const loading = ref(false)
@@ -72,6 +72,10 @@ function articleDetailTo(articleIdValue: number) {
   return `${articleDetailPath(articleIdValue)}?from=${encodeURIComponent(fromPath.value)}`
 }
 
+function tagDetailTo(tagName: string) {
+  return `${tagPath(tagName)}?from=${encodeURIComponent(route.fullPath)}`
+}
+
 watch(() => route.fullPath, async () => {
   await loadArticle()
 })
@@ -93,7 +97,7 @@ onMounted(async () => {
           <span v-for="item in pageHeroMeta" :key="item" class="meta-chip">{{ item }}</span>
         </div>
         <div class="article-tags" v-if="tagsOf(article).length">
-          <span v-for="tag in tagsOf(article)" :key="tag" class="tag-chip"># {{ tag }}</span>
+          <RouterLink v-for="tag in tagsOf(article)" :key="tag" class="tag-chip" :to="tagDetailTo(tag)"># {{ tag }}</RouterLink>
         </div>
       </div>
       <div class="detail-hero-side">

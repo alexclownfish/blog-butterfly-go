@@ -3,6 +3,11 @@ export interface Category {
   name: string
 }
 
+export interface Tag {
+  id: number
+  name: string
+}
+
 export interface Article {
   id: number
   title: string
@@ -28,4 +33,8 @@ export interface ArticleListResponse {
 
 export interface CategoryListResponse {
   data: Category[]
+}
+
+export interface TagListResponse {
+  data: Tag[]
 }

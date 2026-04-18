@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { fetchArticles, fetchCategories } from '@/api/content'
 import type { Article, Category } from '@/types/content'
-import { articleDetailPath, formatDate, plainSummary, tagsOf } from '@/utils/content'
+import { articleDetailPath, formatDate, plainSummary, tagPath, tagsOf, withFromQuery } from '@/utils/content'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -24,6 +24,10 @@ const filteredCategory = computed(() => {
 const featuredArticles = computed(() => articles.value.filter((item) => item.is_top).slice(0, 3))
 const regularArticles = computed(() => articles.value.filter((item) => !item.is_top))
 const latestArticles = computed(() => [...articles.value].slice(0, 4))
+const currentListPath = computed(() => {
+  const url = new URL(window.location.href)
+  return `${url.pathname}${url.search}`
+})
 const insightMetrics = computed(() => {
   const totalViews = articles.value.reduce((sum, article) => sum + (article.views || 0), 0)
   const tagCount = new Set(articles.value.flatMap((article) => tagsOf(article))).size
@@ -135,9 +139,11 @@ function changePage(nextPage: number) {
 }
 
 function articleDetailTo(articleId: number) {
-  const current = new URL(window.location.href)
-  const search = current.search || ''
-  return `${articleDetailPath(articleId)}${search ? `?from=${encodeURIComponent(`/${search}`)}` : ''}`
+  return withFromQuery(articleDetailPath(articleId), currentListPath.value)
+}
+
+function tagDetailTo(tagName: string) {
+  return withFromQuery(tagPath(tagName), currentListPath.value)
 }
 
 watch([page, activeCategoryId], async () => {
@@ -327,7 +333,7 @@ onMounted(async () => {
             <h3 class="article-title">{{ article.title }}</h3>
             <p class="article-summary">{{ plainSummary(article) }}</p>
             <div class="article-tags" v-if="tagsOf(article).length">
-              <span v-for="tag in tagsOf(article)" :key="tag" class="tag-chip"># {{ tag }}</span>
+              <RouterLink v-for="tag in tagsOf(article)" :key="tag" class="tag-chip" :to="tagDetailTo(tag)"># {{ tag }}</RouterLink>
             </div>
             <div class="article-footer">
               <div class="meta-inline">
@@ -375,7 +381,7 @@ onMounted(async () => {
             <h3 class="article-title">{{ article.title }}</h3>
             <p class="article-summary">{{ plainSummary(article) }}</p>
             <div class="article-tags" v-if="tagsOf(article).length">
-              <span v-for="tag in tagsOf(article)" :key="tag" class="tag-chip"># {{ tag }}</span>
+              <RouterLink v-for="tag in tagsOf(article)" :key="tag" class="tag-chip" :to="tagDetailTo(tag)"># {{ tag }}</RouterLink>
             </div>
             <div class="article-footer">
               <div class="meta-inline">

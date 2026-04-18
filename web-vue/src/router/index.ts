@@ -12,6 +12,11 @@ const router = createRouter({
       path: '/posts/:id.html',
       name: 'article-detail',
       component: () => import('@/views/ArticleDetailPage.vue')
+    },
+    {
+      path: '/tags/:name',
+      name: 'tag-detail',
+      component: () => import('@/views/TagDetailPage.vue')
     }
   ]
 })
