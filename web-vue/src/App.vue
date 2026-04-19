@@ -63,9 +63,9 @@ onMounted(() => {
           </button>
           <RouterLink class="pill" to="/">首页</RouterLink>
           <RouterLink class="pill" to="/tags/运维">标签</RouterLink>
-          <a class="pill" href="/categories/">分类</a>
-          <a class="pill" href="/archives/">归档</a>
-          <a class="pill" href="/about/">博主</a>
+          <RouterLink class="pill" to="/categories/">分类</RouterLink>
+          <RouterLink class="pill" to="/archives/">归档</RouterLink>
+          <RouterLink class="pill" to="/about/">博主</RouterLink>
         </div>
       </header>
 
