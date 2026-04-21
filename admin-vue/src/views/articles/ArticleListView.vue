@@ -66,7 +66,7 @@
 
         <el-table-column prop="updated_at" label="更新时间" min-width="180">
           <template #default="{ row }">
-            {{ row.updated_at || '-' }}
+            {{ formatDateTime(row.updated_at) }}
           </template>
         </el-table-column>
 
@@ -107,6 +107,7 @@ import { fetchCategoriesApi } from '@/api/categories'
 import type { Article } from '@/types/article'
 import type { Category } from '@/types/category'
 import ArticleEditorDialog from '@/components/article/ArticleEditorDialog.vue'
+import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const articles = ref<Article[]>([])

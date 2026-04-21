@@ -1,13 +1,52 @@
 import type { Article } from '@/types/content'
 
+const DATE_FALLBACK = '日期待同步'
+const DATE_TIME_FALLBACK = '-'
+
+function pad(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function parseDate(value?: string | number | Date | null) {
+  if (value === null || value === undefined || value === '') return null
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date
+}
+
+function formatDateParts(date: Date) {
+  return {
+    year: String(date.getFullYear()),
+    month: pad(date.getMonth() + 1),
+    day: pad(date.getDate()),
+    hour: pad(date.getHours()),
+    minute: pad(date.getMinutes()),
+    second: pad(date.getSeconds())
+  }
+}
+
 export function formatDate(dateString: string) {
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return '日期待同步'
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  }).format(date)
+  const date = parseDate(dateString)
+  if (!date) return DATE_FALLBACK
+
+  const { year, month, day } = formatDateParts(date)
+  return `${year}-${month}-${day}`
+}
+
+export function formatDateTime(value?: string | number | Date | null, fallback = DATE_TIME_FALLBACK) {
+  const date = parseDate(value)
+  if (!date) return fallback
+
+  const { year, month, day, hour, minute, second } = formatDateParts(date)
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`
+}
+
+export function formatTime(value?: string | number | Date | null, fallback = DATE_TIME_FALLBACK) {
+  const date = parseDate(value)
+  if (!date) return fallback
+
+  const { hour, minute, second } = formatDateParts(date)
+  return `${hour}:${minute}:${second}`
 }
 
 export function tagsOf(article: Article) {

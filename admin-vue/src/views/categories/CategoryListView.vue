@@ -15,12 +15,12 @@
         <el-table-column prop="name" label="分类名称" min-width="220" />
         <el-table-column prop="created_at" label="创建时间" min-width="180">
           <template #default="{ row }">
-            {{ formatDate(row.created_at) }}
+            {{ formatDateTime(row.created_at) }}
           </template>
         </el-table-column>
         <el-table-column prop="updated_at" label="更新时间" min-width="180">
           <template #default="{ row }">
-            {{ formatDate(row.updated_at) }}
+            {{ formatDateTime(row.updated_at) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
@@ -67,6 +67,7 @@ import {
   updateCategoryApi
 } from '@/api/categories'
 import type { Category, CategoryPayload } from '@/types/category'
+import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -93,13 +94,6 @@ function normalizePayload(): CategoryPayload {
   return {
     name: form.name.trim()
   }
-}
-
-function formatDate(value?: string) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString('zh-CN')
 }
 
 async function loadCategories() {

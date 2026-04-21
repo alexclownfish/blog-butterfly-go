@@ -81,13 +81,46 @@ function setEditorSaveState(key, customText = '') {
   element.textContent = customText || preset.text;
 }
 
-function formatTimeLabel(date = new Date()) {
-  return date.toLocaleTimeString('zh-CN', {
-    hour12: false,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+function padDatePart(value) {
+  return String(value).padStart(2, '0');
+}
+
+function parseDateValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateParts(date) {
+  return {
+    year: String(date.getFullYear()),
+    month: padDatePart(date.getMonth() + 1),
+    day: padDatePart(date.getDate()),
+    hour: padDatePart(date.getHours()),
+    minute: padDatePart(date.getMinutes()),
+    second: padDatePart(date.getSeconds())
+  };
+}
+
+function formatDateLabel(value, fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { year, month, day } = formatDateParts(date);
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeLabel(value = new Date(), fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { hour, minute, second } = formatDateParts(date);
+  return `${hour}:${minute}:${second}`;
+}
+
+function formatDateTimeLabel(value, fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { year, month, day, hour, minute, second } = formatDateParts(date);
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
 }
 
 function updateEditorStats(content = '') {
@@ -504,7 +537,7 @@ async function loadArticles() {
           </div>
           <div class="meta-card">
             <small>创建时间</small>
-            <strong>${new Date(article.created_at).toLocaleDateString()}</strong>
+            <strong>${formatDateLabel(article.created_at)}</strong>
           </div>
           <div class="meta-card tags-card">
             <small>标签</small>

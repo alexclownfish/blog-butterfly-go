@@ -335,6 +335,7 @@ import { marked } from 'marked'
 
 import { fetchArticleDetailApi, createArticleApi, updateArticleApi } from '@/api/articles'
 import { fetchImagesApi, uploadImageApi, deleteImageApi } from '@/api/images'
+import { formatDateTime } from '@/utils/date'
 import type { ArticleEditorForm } from '@/types/article'
 import { createDefaultArticleForm } from '@/types/article'
 import type { Category } from '@/types/category'
@@ -626,18 +627,6 @@ function normalizePayload(): ArticleEditorForm {
     is_top: Boolean(form.is_top),
     status: form.status
   }
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
 }
 
 function formatFileSize(value?: number) {
