@@ -191,7 +191,11 @@
             </div>
 
             <div class="markdown-tips">
-              支持 Markdown 编写；本地草稿会自动保存，服务器保存仍需点击按钮或按 ⌘/Ctrl + S。
+              <span>支持 Markdown 编写；本地草稿会自动保存，服务器保存仍需点击按钮或按 ⌘/Ctrl + S。</span>
+              <div class="markdown-metrics" aria-label="写作统计">
+                <span class="markdown-metrics__item">{{ contentWordCount }} 字</span>
+                <span class="markdown-metrics__item">预计阅读 {{ estimatedReadingTimeLabel }}</span>
+              </div>
             </div>
 
             <div class="markdown-workspace" :class="`mode-${previewMode}`">
@@ -201,6 +205,7 @@
                   v-model="form.content"
                   class="markdown-textarea"
                   placeholder="# 从这里开始写作\n\n- 支持 Markdown 语法\n- 可使用分栏实时预览\n- 本地草稿会自动保存"
+                  @keydown="handleContentTextareaKeydown"
                 />
               </div>
 
@@ -356,6 +361,7 @@ interface ImageSelectionOptions {
 
 const AUTOSAVE_DELAY = 1200
 const NEW_ARTICLE_DRAFT_KEY = 'admin-vue:article-editor:new'
+const READING_CHARS_PER_MINUTE = 300
 
 const props = withDefaults(defineProps<Props>(), {
   articleId: null,
@@ -424,6 +430,30 @@ const draftRecoveryMessage = computed(() => {
 })
 
 const renderedMarkdown = computed(() => marked.parse(form.content || '', { breaks: true }) as string)
+const contentWordCount = computed(() => {
+  const plainText = (form.content || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]\([^)]*\)/g, '$1')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[#>*_~\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!plainText) return 0
+
+  const cjkMatches = plainText.match(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu) || []
+  const latinMatches = plainText
+    .replace(/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu, ' ')
+    .match(/[A-Za-z0-9]+(?:['’-][A-Za-z0-9]+)*/g) || []
+
+  return cjkMatches.length + latinMatches.length
+})
+const estimatedReadingMinutes = computed(() =>
+  Math.max(1, Math.ceil(contentWordCount.value / READING_CHARS_PER_MINUTE))
+)
+const estimatedReadingTimeLabel = computed(() => `${estimatedReadingMinutes.value} 分钟`)
 
 const serverSaveTagType = computed(() => {
   switch (serverSaveState.value) {
@@ -977,6 +1007,67 @@ function insertMarkdownSyntax(
   })
 }
 
+function indentSelectedLines(textarea: HTMLTextAreaElement) {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const value = form.content
+  const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+  const lineEndIndex = value.indexOf('\n', end)
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex
+  const selectedBlock = value.slice(lineStart, lineEnd)
+  const indentedBlock = selectedBlock
+    .split('\n')
+    .map((line) => `  ${line}`)
+    .join('\n')
+
+  form.content = `${value.slice(0, lineStart)}${indentedBlock}${value.slice(lineEnd)}`
+
+  nextTick(() => {
+    textarea.focus()
+    textarea.setSelectionRange(lineStart, lineStart + indentedBlock.length)
+  })
+}
+
+function unindentSelectedLines(textarea: HTMLTextAreaElement) {
+  const start = textarea.selectionStart
+  const end = textarea.selectionEnd
+  const value = form.content
+  const lineStart = value.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+  const lineEndIndex = value.indexOf('\n', end)
+  const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex
+  const selectedBlock = value.slice(lineStart, lineEnd)
+  const lines = selectedBlock.split('\n')
+  const unindentedLines = lines.map((line) => {
+    if (line.startsWith('  ')) return line.slice(2)
+    if (line.startsWith('\t')) return line.slice(1)
+    if (line.startsWith(' ')) return line.slice(1)
+    return line
+  })
+  const unindentedBlock = unindentedLines.join('\n')
+
+  form.content = `${value.slice(0, lineStart)}${unindentedBlock}${value.slice(lineEnd)}`
+
+  nextTick(() => {
+    textarea.focus()
+    textarea.setSelectionRange(lineStart, lineStart + unindentedBlock.length)
+  })
+}
+
+function handleContentTextareaKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Tab') return
+
+  const textarea = contentTextareaRef.value
+  if (!textarea) return
+
+  event.preventDefault()
+  if (event.shiftKey) {
+    unindentSelectedLines(textarea)
+    return
+  }
+
+  indentSelectedLines(textarea)
+}
+
 function handleDialogKeydown(event: KeyboardEvent) {
   if (!props.modelValue) return
   if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return
@@ -1240,6 +1331,28 @@ onBeforeUnmount(() => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   border-bottom: 1px solid var(--el-border-color-light);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.markdown-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--el-text-color-regular);
+}
+
+.markdown-metrics__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--el-fill-color-light);
 }
 
 .markdown-workspace {

@@ -38,11 +38,32 @@
   --el-table-header-bg-color: rgba(255, 255, 255, 0.04);
   --el-table-text-color: var(--text);
   --el-table-header-text-color: var(--muted-strong);
+  --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.05);
+  --el-table-current-row-bg-color: rgba(123, 138, 255, 0.14);
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.05);
+  --el-fill-color-light: rgba(255, 255, 255, 0.08);
 }
 
 .el-table th.el-table__cell,
-.el-table tr {
+.el-table tr,
+.el-table td.el-table__cell,
+.el-table__body tr.hover-row > td.el-table__cell,
+.el-table__body tr.current-row > td.el-table__cell,
+.el-table__fixed-body-wrapper tr.hover-row > td.el-table__cell,
+.el-table__fixed-body-wrapper tr.current-row > td.el-table__cell {
   background: transparent !important;
+}
+
+.el-table__body tr:hover > td.el-table__cell,
+.el-table__body tr.hover-row > td.el-table__cell,
+.el-table__fixed-body-wrapper tr:hover > td.el-table__cell,
+.el-table__fixed-body-wrapper tr.hover-row > td.el-table__cell {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.el-table__body tr.current-row > td.el-table__cell,
+.el-table__fixed-body-wrapper tr.current-row > td.el-table__cell {
+  background: rgba(123, 138, 255, 0.14) !important;
 }
 
 .el-dialog {
