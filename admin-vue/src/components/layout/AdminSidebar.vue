@@ -25,6 +25,11 @@
         <span>🗂️</span>
         <span>分类管理</span>
       </RouterLink>
+
+      <RouterLink to="/images" class="sidebar-link">
+        <span>🖼️</span>
+        <span>素材管理</span>
+      </RouterLink>
     </div>
 
     <div class="sidebar-footnote">

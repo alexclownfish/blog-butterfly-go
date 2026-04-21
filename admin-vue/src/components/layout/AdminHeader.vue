@@ -27,6 +27,7 @@ const pageTitle = computed(() => {
   if (route.path === '/change-password') return '修改密码'
   if (route.path.startsWith('/articles')) return '文章管理'
   if (route.path.startsWith('/categories')) return '分类管理'
+  if (route.path.startsWith('/images')) return '素材管理'
   if (route.path.startsWith('/dashboard')) return '工作台'
   return '内容管理后台'
 })
@@ -40,6 +41,9 @@ const pageDescription = computed(() => {
   }
   if (route.path.startsWith('/categories')) {
     return '维护文章分类字典，先把内容货架摆明白，编辑时才不至于手忙脚乱。'
+  }
+  if (route.path.startsWith('/images')) {
+    return '统一维护封面图和正文配图，支持上传、复制链接与批量清理，让素材库不再发霉。'
   }
   if (route.path.startsWith('/dashboard')) {
     return '这是新一代 admin-vue 后台工作台的起点，先把内容主链路跑通，再做效率增强。'
