@@ -168,6 +168,8 @@ button, input { font: inherit; }
 .hero-live-card p, .metric-item p, .compact-article p, .editorial-card p, .journey-card p { color: var(--muted); }
 .mini-card strong, .metric-item strong, .editorial-card h3, .journey-card h3 { display:block; font-size:1.25rem; margin-top:8px; letter-spacing:-.04em; color:var(--surface-title); }
 .stat-card .stat-card-label, .stat-card .stat-value { color: var(--cream-strong); }
+body[data-theme='light'] .stat-card .stat-card-label { color: var(--surface-kicker); }
+body[data-theme='light'] .stat-card .stat-value { color: var(--surface-title); }
 .main-grid, .detail-shell { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; margin-top:30px; }
 .signal-grid { display:grid; grid-template-columns:repeat(12, minmax(0,1fr)); gap:20px; }
 .signal-panel { padding:24px; grid-column: span 4; }
