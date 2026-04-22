@@ -381,7 +381,27 @@ npm test
 curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh | bash
 ```
 
+也可以通过环境变量指定安装目录或仓库分支：
+
+```bash
+# 指定安装目录
+curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh \
+  | INSTALL_DIR=/opt/blog-v2 bash
+
+# 指定分支（例如 dev）
+curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh \
+  | REPO_REF=dev bash
+
+# 同时指定安装目录 + 分支
+curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh \
+  | INSTALL_DIR=/opt/blog-v2 REPO_REF=dev bash
+```
+
 > 如果仓库默认分支或 raw 地址后续变化，请按实际 GitHub 地址调整。你给的目标入口是 `script/install-docker-compose.sh`，所以脚本已放在该路径。
+>
+> 说明：
+> - `INSTALL_DIR` 默认值为 `/opt/blog-butterfly-go`
+> - `REPO_REF` 默认值为 `main`
 
 脚本行为：
 
