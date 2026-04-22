@@ -1,0 +1,1629 @@
+const API = window.getApiBase();
+const token = localStorage.getItem('token');
+let editingId = null;
+let articleFilters = {
+  status: '',
+  search: '',
+  categoryId: ''
+};
+let articleCategories = [];
+let imageCache = null;
+let articlePagination = {
+  page: 1,
+  pageSize: 10,
+  total: 0
+};
+let currentImagePage = 1;
+const imagePageSize = 20;
+let selectedImages = [];
+let markdownEditor = null;
+let autosaveTimer = null;
+let editorDirty = false;
+let isSavingArticle = false;
+let imagePickerMode = null;
+let imagePickerKeyword = '';
+let suppressAutosave = false;
+let currentEditorDraftKey = null;
+let currentServerArticleUpdatedAt = null;
+let pendingArticleHighlight = {
+  id: null,
+  title: ''
+};
+
+const AUTOSAVE_DELAY = 2000;
+const DRAFT_KEY_NEW = 'admin:draft:new';
+const SAVE_STATES = {
+  idle: { text: '未保存', className: 'info' },
+  savingLocal: { text: '正在自动保存到本地...', className: 'info' },
+  saveFailed: { text: '自动保存失败', className: 'error' },
+  savedRemote: { text: '已保存到服务器', className: 'success' }
+};
+
+function getCoverInput() {
+  return document.getElementById('editCover');
+}
+
+function getCoverPreview() {
+  return document.getElementById('coverPreview');
+}
+
+function getEditorModal() {
+  return document.getElementById('editorModal');
+}
+
+function getImagePickerModal() {
+  return document.getElementById('imagePickerModal');
+}
+
+function getSaveStateElement() {
+  return document.getElementById('editorSaveState');
+}
+
+function getEditorStatsElement() {
+  return document.getElementById('editorStats');
+}
+
+function getEditorModeHintElement() {
+  return document.getElementById('editorModeHint');
+}
+
+function setEditorModeHint(text) {
+  const element = getEditorModeHintElement();
+  if (element) element.textContent = text;
+}
+
+function setEditorSaveState(key, customText = '') {
+  const element = getSaveStateElement();
+  if (!element) return;
+
+  const preset = SAVE_STATES[key] || SAVE_STATES.idle;
+  element.className = `editor-status-chip ${preset.className}`;
+  element.textContent = customText || preset.text;
+}
+
+function padDatePart(value) {
+  return String(value).padStart(2, '0');
+}
+
+function parseDateValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateParts(date) {
+  return {
+    year: String(date.getFullYear()),
+    month: padDatePart(date.getMonth() + 1),
+    day: padDatePart(date.getDate()),
+    hour: padDatePart(date.getHours()),
+    minute: padDatePart(date.getMinutes()),
+    second: padDatePart(date.getSeconds())
+  };
+}
+
+function formatDateLabel(value, fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { year, month, day } = formatDateParts(date);
+  return `${year}-${month}-${day}`;
+}
+
+function formatTimeLabel(value = new Date(), fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { hour, minute, second } = formatDateParts(date);
+  return `${hour}:${minute}:${second}`;
+}
+
+function formatDateTimeLabel(value, fallback = '--') {
+  const date = parseDateValue(value);
+  if (!date) return fallback;
+  const { year, month, day, hour, minute, second } = formatDateParts(date);
+  return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+}
+
+function updateEditorStats(content = '') {
+  const element = getEditorStatsElement();
+  if (!element) return;
+
+  const normalized = String(content || '').replace(/\s+/g, ' ').trim();
+  const charCount = normalized ? normalized.length : 0;
+  const readingMinutes = Math.max(1, Math.ceil(charCount / 300));
+  element.textContent = `${charCount} 字 · 预计 ${readingMinutes} 分钟阅读`;
+}
+
+function handleCoverInputChange() {
+  renderCoverPreview(getCoverInput()?.value.trim() || '');
+  markEditorDirty();
+}
+
+async function refreshRandomCover() {
+  try {
+    await ensureImageCache();
+    const randomUrl = pickRandomCoverUrl();
+    if (!randomUrl) {
+      showFeedback('当前素材库暂无可用图片，暂时无法更换封面。', 'error');
+      return;
+    }
+    applyCoverValue(randomUrl);
+    markEditorDirty();
+    showFeedback('已随机换了一张封面，看看这张顺不顺眼 😎', 'success');
+  } catch (error) {
+    showFeedback(`随机封面失败：${error.message}`, 'error');
+  }
+}
+
+function pickRandomCoverUrl() {
+  const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  if (!images.length) return '';
+  const index = Math.floor(Math.random() * images.length);
+  return images[index]?.url || '';
+}
+
+function applyCoverValue(url = '', options = {}) {
+  const { markDirty = false } = options;
+  const input = getCoverInput();
+  if (input) input.value = url || '';
+  renderCoverPreview(url || '');
+  if (markDirty) markEditorDirty();
+}
+
+function renderCoverPreview(url = '') {
+  const preview = getCoverPreview();
+  if (!preview) return;
+
+  if (!url) {
+    preview.className = 'cover-preview empty';
+    preview.innerHTML = `
+      <div class="cover-preview-row">
+        <div class="cover-preview-thumb cover-preview-thumb-empty">🖼️</div>
+        <div class="cover-preview-side">
+          <div class="cover-preview-actions">
+            <strong>未选择封面</strong>
+            <button type="button" class="btn btn-ghost btn-cover-refresh" onclick="refreshRandomCover()">换一张</button>
+          </div>
+          <p>默认会随机挑一张图，你要是不喜欢，直接改 URL 就行。</p>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  preview.className = 'cover-preview';
+  preview.innerHTML = `
+    <div class="cover-preview-row">
+      <img class="cover-preview-thumb" src="${escapeHtml(url)}" alt="cover preview">
+      <div class="cover-preview-side">
+        <div class="cover-preview-actions">
+          <strong>当前封面</strong>
+          <button type="button" class="btn btn-ghost btn-cover-refresh" onclick="refreshRandomCover()">换一张</button>
+        </div>
+        <p title="${escapeHtml(url)}">${escapeHtml(url)}</p>
+      </div>
+    </div>
+  `;
+}
+
+async function ensureImageCache() {
+  if (Array.isArray(imageCache)) return imageCache;
+  const json = await requestJson(`${API}/images`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  imageCache = Array.isArray(json.data) ? json.data : [];
+  return imageCache;
+}
+
+if (!token) location.href = '/admin/login.html';
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[char]));
+}
+
+function setActiveSidebar(link) {
+  document.querySelectorAll('.sidebar a').forEach((a) => a.classList.remove('active'));
+  if (link) link.classList.add('active');
+}
+
+function showPage(page, link) {
+  setActiveSidebar(link);
+  if (page === 'articles') loadArticlesPage();
+  else if (page === 'categories') loadCategoriesPage();
+  else if (page === 'images') loadImagesPage();
+}
+
+function showFeedback(message, type = 'info') {
+  const feedback = document.getElementById('page-feedback');
+  if (!feedback) {
+    if (type === 'error') alert(message);
+    return;
+  }
+
+  feedback.className = `feedback-banner ${type}`;
+  feedback.style.display = 'flex';
+  feedback.innerHTML = `
+    <span class="feedback-icon">${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span>
+    <span>${escapeHtml(message)}</span>
+  `;
+}
+
+function clearFeedback() {
+  const feedback = document.getElementById('page-feedback');
+  if (feedback) {
+    feedback.style.display = 'none';
+    feedback.className = 'feedback-banner';
+    feedback.textContent = '';
+  }
+}
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    payload = null;
+  }
+
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    location.href = '/admin/login.html';
+    throw new Error('登录已过期，请重新登录');
+  }
+
+  if (!response.ok) {
+    throw new Error((payload && (payload.error || payload.message)) || `请求失败（${response.status}）`);
+  }
+
+  return payload;
+}
+
+function buildArticleQuery() {
+  const params = new URLSearchParams();
+  if (articleFilters.status) params.set('status', articleFilters.status);
+  if (articleFilters.search) params.set('search', articleFilters.search);
+  if (articleFilters.categoryId) params.set('category_id', articleFilters.categoryId);
+  params.set('page', String(articlePagination.page));
+  params.set('page_size', String(articlePagination.pageSize));
+  const query = params.toString();
+  return query ? `?${query}` : '';
+}
+
+async function loadDashboardStats() {
+  const articleTotal = document.getElementById('dashboard-article-total');
+  const publishedTotal = document.getElementById('dashboard-published-total');
+  const categoryImageTotal = document.getElementById('dashboard-category-image-total');
+  if (!articleTotal || !publishedTotal || !categoryImageTotal || !token) return;
+
+  try {
+    const json = await requestJson(`${API}/dashboard/stats`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const stats = json.data || {};
+    articleTotal.textContent = String(stats.article_total ?? 0);
+    publishedTotal.textContent = `${stats.published_total ?? 0} / ${stats.draft_total ?? 0}`;
+    categoryImageTotal.textContent = `${stats.category_total ?? 0} / ${stats.image_total ?? 0}`;
+  } catch (error) {
+    articleTotal.textContent = '--';
+    publishedTotal.textContent = '-- / --';
+    categoryImageTotal.textContent = '-- / --';
+    console.warn('loadDashboardStats failed', error);
+  }
+}
+
+function renderStateCard(message, type = 'info') {
+  const icons = { info: '⏳', empty: '🧅', error: '⚠️' };
+  return `
+    <div class="state-card ${type}">
+      <div class="state-icon">${icons[type] || 'ℹ️'}</div>
+      <div class="state-message">${escapeHtml(message)}</div>
+    </div>
+  `;
+}
+
+function renderArticlesLoading(message = '正在加载文章列表...') {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+  list.innerHTML = renderStateCard(message, 'info');
+}
+
+function queueArticleHighlight(article = {}) {
+  pendingArticleHighlight = {
+    id: article && article.id ? Number(article.id) : null,
+    title: article && article.title ? String(article.title).trim() : ''
+  };
+}
+
+function clearPendingArticleHighlight() {
+  pendingArticleHighlight = { id: null, title: '' };
+}
+
+function tryHighlightArticle(list, articles = []) {
+  if (!list || !pendingArticleHighlight.id) return false;
+
+  const cards = Array.from(list.querySelectorAll('.article-card'));
+  if (!cards.length) return false;
+
+  const targetArticle = articles.find((item) => Number(item.id) === pendingArticleHighlight.id)
+    || articles.find((item) => pendingArticleHighlight.title && String(item.title || '').trim() === pendingArticleHighlight.title);
+
+  if (!targetArticle) return false;
+
+  const targetCard = cards.find((card) => Number(card.dataset.articleId) === Number(targetArticle.id));
+  if (!targetCard) return false;
+
+  targetCard.classList.add('article-card-highlight');
+  targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => targetCard.classList.remove('article-card-highlight'), 2600);
+  clearPendingArticleHighlight();
+  return true;
+}
+
+function syncCategoryFilterOptions() {
+  const select = document.getElementById('articleCategoryFilter');
+  if (!select) return;
+
+  const currentValue = articleFilters.categoryId || '';
+  select.innerHTML = '<option value="">全部分类</option>';
+  articleCategories.forEach((category) => {
+    select.innerHTML += `<option value="${category.id}">${escapeHtml(category.name)}</option>`;
+  });
+  select.value = currentValue;
+}
+
+function loadArticlesPage() {
+  document.getElementById('content').innerHTML = `
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">✦ 文章中心</div>
+          <h3>文章管理</h3>
+          <p>支持按状态、分类与关键词筛选，帮助你更高效地定位与管理内容。</p>
+        </div>
+        <button class="btn btn-primary" onclick="openEditor()">+ 新建文章</button>
+      </div>
+
+      <div id="page-feedback" class="feedback-banner" style="display:none;"></div>
+
+      <div class="filter-grid">
+        <label class="field compact-field">
+          <span>状态筛选</span>
+          <select id="articleStatusFilter">
+            <option value="">全部状态</option>
+            <option value="published">已发布</option>
+            <option value="draft">草稿</option>
+          </select>
+        </label>
+
+        <label class="field compact-field">
+          <span>分类筛选</span>
+          <select id="articleCategoryFilter">
+            <option value="">全部分类</option>
+          </select>
+        </label>
+
+        <label class="field compact-field grow">
+          <span>关键词</span>
+          <input id="articleSearchInput" type="text" placeholder="搜索标题、摘要或正文关键词">
+        </label>
+
+        <div class="filter-actions">
+          <button class="btn btn-primary" onclick="applyArticleFilters()">筛选</button>
+          <button class="btn" onclick="resetArticleFilters()">重置</button>
+        </div>
+      </div>
+
+      <div id="article-list" class="article-list"></div>
+      <div id="article-pagination"></div>
+    </section>
+  `;
+
+  syncCategoryFilterOptions();
+  document.getElementById('articleStatusFilter').value = articleFilters.status;
+  document.getElementById('articleCategoryFilter').value = articleFilters.categoryId;
+  document.getElementById('articleSearchInput').value = articleFilters.search;
+  renderArticlesLoading();
+  loadArticles();
+}
+
+function applyArticleFilters() {
+  articleFilters.status = document.getElementById('articleStatusFilter').value;
+  articleFilters.categoryId = document.getElementById('articleCategoryFilter').value;
+  articleFilters.search = document.getElementById('articleSearchInput').value.trim();
+  articlePagination.page = 1;
+  clearFeedback();
+  renderArticlesLoading('正在应用筛选条件...');
+  loadArticles();
+}
+
+function resetArticleFilters() {
+  articleFilters = { status: '', search: '', categoryId: '' };
+  articlePagination.page = 1;
+  document.getElementById('articleStatusFilter').value = '';
+  document.getElementById('articleCategoryFilter').value = '';
+  document.getElementById('articleSearchInput').value = '';
+  clearFeedback();
+  renderArticlesLoading('正在重置筛选条件...');
+  loadArticles();
+}
+
+function renderArticlePagination() {
+  const container = document.getElementById('article-pagination');
+  if (!container) return;
+
+  const totalPages = Math.max(1, Math.ceil((articlePagination.total || 0) / articlePagination.pageSize));
+  if ((articlePagination.total || 0) <= articlePagination.pageSize) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="pagination article-pagination">
+      <button class="btn" onclick="changeArticlePage(${articlePagination.page - 1})" ${articlePagination.page <= 1 ? 'disabled' : ''}>上一页</button>
+      <span>第 ${articlePagination.page} / ${totalPages} 页 · 共 ${articlePagination.total} 篇</span>
+      <button class="btn" onclick="changeArticlePage(${articlePagination.page + 1})" ${articlePagination.page >= totalPages ? 'disabled' : ''}>下一页</button>
+    </div>
+  `;
+}
+
+function changeArticlePage(page) {
+  const totalPages = Math.max(1, Math.ceil((articlePagination.total || 0) / articlePagination.pageSize));
+  if (page < 1 || page > totalPages) return;
+  articlePagination.page = page;
+  renderArticlesLoading('正在切换页码...');
+  loadArticles();
+}
+
+async function loadArticles() {
+  const list = document.getElementById('article-list');
+  if (!list) return;
+
+  try {
+    if (!articleCategories.length) {
+      await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
+    }
+    const json = await requestJson(`${API}/articles${buildArticleQuery()}`);
+    const articles = Array.isArray(json.data) ? json.data : [];
+    articlePagination.total = Number(json.total || 0);
+    articlePagination.page = Number(json.page || articlePagination.page || 1);
+    articlePagination.pageSize = Number(json.page_size || articlePagination.pageSize || 10);
+    list.innerHTML = '';
+
+    if (!articles.length) {
+      renderArticlePagination();
+      list.innerHTML = renderStateCard('当前筛选条件下暂无文章内容。', 'empty');
+      return;
+    }
+
+    articles.forEach((article) => {
+      const div = document.createElement('article');
+      div.className = 'article-card';
+      div.dataset.articleId = String(article.id);
+      const statusText = article.status === 'draft' ? '草稿' : '已发布';
+      const statusClass = article.status === 'draft' ? 'draft' : 'published';
+      const topBadge = article.is_top ? '<span class="badge top">置顶</span>' : '';
+      const categoryText = article.category && article.category.name ? article.category.name : '未分类';
+      const tagsArray = article.tags ? String(article.tags).split(',').map((tag) => tag.trim()).filter(Boolean) : [];
+      const tagsHtml = tagsArray.length
+        ? tagsArray.map((tag) => `<span class="tag-pill"># ${escapeHtml(tag)}</span>`).join('')
+        : '<span class="meta-empty">暂无标签</span>';
+
+      div.innerHTML = `
+        <div class="article-card-head">
+          <div class="article-title-wrap">
+            <div class="article-title-row">
+              <h4>${escapeHtml(article.title)}</h4>
+              <span class="badge ${statusClass}">${statusText}</span>
+              ${topBadge}
+            </div>
+            <p>${escapeHtml(article.summary || '暂无摘要，作者可能正在和灵感打拉扯战。')}</p>
+          </div>
+          <div class="article-actions">
+            <button class="btn btn-primary" onclick="openEditor(${article.id})">编辑</button>
+            <button class="btn btn-danger" onclick="deleteArticle(${article.id})">删除</button>
+          </div>
+        </div>
+
+        <div class="article-meta-grid">
+          <div class="meta-card">
+            <small>分类</small>
+            <strong>${escapeHtml(categoryText)}</strong>
+          </div>
+          <div class="meta-card">
+            <small>创建时间</small>
+            <strong>${formatDateLabel(article.created_at)}</strong>
+          </div>
+          <div class="meta-card tags-card">
+            <small>标签</small>
+            <div class="tag-row">${tagsHtml}</div>
+          </div>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+
+    renderArticlePagination();
+    tryHighlightArticle(list, articles);
+  } catch (error) {
+    const pagination = document.getElementById('article-pagination');
+    if (pagination) pagination.innerHTML = '';
+    list.innerHTML = renderStateCard(`加载文章失败：${error.message}`, 'error');
+    showFeedback(`加载文章失败：${error.message}`, 'error');
+  }
+}
+
+async function deleteArticle(id) {
+  if (!confirm('确定删除这篇文章吗？')) return;
+
+  try {
+    clearFeedback();
+    showFeedback('正在删除文章...', 'info');
+    await requestJson(`${API}/articles/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    showFeedback('文章已删除', 'success');
+    renderArticlesLoading('正在刷新文章列表...');
+    await loadArticles();
+  } catch (error) {
+    showFeedback(`删除失败：${error.message}`, 'error');
+  }
+}
+
+async function loadCategoryOptions(selectedId = '', options = {}) {
+  const { quiet = false, syncFilter = false } = options;
+  const sel = document.getElementById('editCategory');
+  if (sel) {
+    sel.innerHTML = '<option value="">选择分类</option>';
+  }
+
+  try {
+    const json = await requestJson(`${API}/categories`);
+    articleCategories = Array.isArray(json.data) ? json.data : [];
+    if (sel) {
+      articleCategories.forEach((c) => {
+        sel.innerHTML += `<option value="${c.id}">${escapeHtml(c.name)}</option>`;
+      });
+      sel.value = selectedId ? String(selectedId) : '';
+    }
+    if (syncFilter) {
+      syncCategoryFilterOptions();
+    }
+  } catch (error) {
+    if (!quiet) {
+      showFeedback(`加载分类失败：${error.message}`, 'error');
+    }
+  }
+}
+
+function initMarkdownEditor() {
+  const textarea = document.getElementById('editContent');
+  if (!textarea || markdownEditor || typeof EasyMDE === 'undefined') return;
+
+  markdownEditor = new EasyMDE({
+    element: textarea,
+    spellChecker: false,
+    autoDownloadFontAwesome: false,
+    forceSync: true,
+    status: false,
+    renderingConfig: {
+      singleLineBreaks: false,
+      codeSyntaxHighlighting: false
+    },
+    toolbar: [
+      'bold',
+      'italic',
+      'heading',
+      '|',
+      'quote',
+      'unordered-list',
+      'ordered-list',
+      '|',
+      'code',
+      'link',
+      {
+        name: 'image-library',
+        action: () => openImagePicker('markdown'),
+        className: 'fa fa-picture-o',
+        title: '从素材库插入图片'
+      },
+      '|',
+      'preview',
+      'side-by-side',
+      'fullscreen'
+    ]
+  });
+
+  markdownEditor.codemirror.on('change', () => {
+    updateEditorStats(getEditorContent());
+    markEditorDirty();
+  });
+}
+
+function destroyMarkdownEditor() {
+  if (!markdownEditor) return;
+  markdownEditor.toTextArea();
+  markdownEditor = null;
+}
+
+function getEditorContent() {
+  if (markdownEditor) return markdownEditor.value();
+  return document.getElementById('editContent')?.value || '';
+}
+
+function setEditorContent(value) {
+  const nextValue = value || '';
+  if (markdownEditor) {
+    markdownEditor.value(nextValue);
+  } else {
+    const textarea = document.getElementById('editContent');
+    if (textarea) textarea.value = nextValue;
+  }
+  updateEditorStats(nextValue);
+}
+
+function insertMarkdownImage(url, altText = '图片描述') {
+  if (!markdownEditor) return;
+  const cm = markdownEditor.codemirror;
+  const doc = cm.getDoc();
+  const text = `![${altText}](${url})`;
+  doc.replaceSelection(text);
+  cm.focus();
+  markEditorDirty();
+}
+
+function openImagePicker(mode) {
+  imagePickerMode = mode;
+  imagePickerKeyword = '';
+  const modal = getImagePickerModal();
+  const tip = document.getElementById('imagePickerModeText');
+  const searchInput = getImagePickerSearchElement();
+  if (tip) {
+    tip.textContent = mode === 'cover'
+      ? '当前操作：选择封面图，点击后会自动回填到封面输入框。'
+      : '当前操作：插入正文配图，点击后会插入到当前光标位置。';
+  }
+  if (searchInput) searchInput.value = '';
+  setImagePickerResultMeta('正在加载素材...');
+
+  if (modal) modal.style.display = 'block';
+
+  ensureImageCache()
+    .then(() => renderImagePicker())
+    .catch((error) => {
+      const grid = document.getElementById('imagePickerGrid');
+      if (grid) grid.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+      setImagePickerResultMeta('素材加载失败');
+    });
+}
+
+function closeImagePicker() {
+  imagePickerMode = null;
+  imagePickerKeyword = '';
+  const modal = getImagePickerModal();
+  const searchInput = getImagePickerSearchElement();
+  if (searchInput) searchInput.value = '';
+  setImagePickerResultMeta('共 0 张素材');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderImagePicker() {
+  const grid = document.getElementById('imagePickerGrid');
+  if (!grid) return;
+
+  const allImages = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  const images = getFilteredImagePickerItems();
+  if (!allImages.length) {
+    setImagePickerResultMeta('共 0 张素材');
+    grid.innerHTML = renderStateCard('素材库中暂无图片，请先上传素材后再进行选择。', 'empty');
+    return;
+  }
+
+  setImagePickerResultMeta(
+    imagePickerKeyword
+      ? `已筛出 ${images.length} / ${allImages.length} 张素材`
+      : `共 ${allImages.length} 张素材`
+  );
+
+  if (!images.length) {
+    grid.innerHTML = renderStateCard(`没有匹配“${escapeHtml(imagePickerKeyword)}”的素材，换个关键词试试。`, 'empty');
+    return;
+  }
+
+  grid.innerHTML = images.map((item) => `
+    <button type="button" class="image-picker-item" onclick="handleImagePick('${escapeHtml(item.url).replace(/'/g, '&#39;')}')">
+      <img src="${escapeHtml(item.url)}" alt="image option">
+      <span>${escapeHtml(item.url)}</span>
+    </button>
+  `).join('');
+}
+
+function decodeHtmlEntities(value) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = value;
+  return textarea.value;
+}
+
+function getImagePickerSearchElement() {
+  return document.getElementById('imagePickerSearch');
+}
+
+function setImagePickerResultMeta(text) {
+  const element = document.getElementById('imagePickerResultMeta');
+  if (element) element.textContent = text;
+}
+
+function getImageSearchTokens(item = {}) {
+  return [
+    item.url,
+    item.name,
+    item.filename,
+    item.original_name,
+    item.originalName,
+    item.key,
+    item.path
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+}
+
+function getFilteredImagePickerItems() {
+  const images = Array.isArray(imageCache) ? imageCache.filter((item) => item && item.url) : [];
+  const keyword = imagePickerKeyword.trim().toLowerCase();
+  if (!keyword) return images;
+  return images.filter((item) => getImageSearchTokens(item).some((token) => token.includes(keyword)));
+}
+
+function handleImagePickerSearch(value = '') {
+  imagePickerKeyword = String(value || '').trim();
+  renderImagePicker();
+}
+
+function handleImagePick(rawUrl) {
+  const url = decodeHtmlEntities(rawUrl);
+  if (!url) return;
+
+  if (imagePickerMode === 'cover') {
+    applyCoverValue(url, { markDirty: true });
+  } else if (imagePickerMode === 'markdown') {
+    insertMarkdownImage(url);
+  }
+
+  closeImagePicker();
+}
+
+function getDraftStorageKey() {
+  return editingId ? `admin:draft:article:${editingId}` : DRAFT_KEY_NEW;
+}
+
+function buildEditorSnapshot() {
+  return {
+    title: document.getElementById('editTitle')?.value.trim() || '',
+    summary: document.getElementById('editSummary')?.value.trim() || '',
+    cover_image: document.getElementById('editCover')?.value.trim() || '',
+    category_id: document.getElementById('editCategory')?.value || '',
+    tags: document.getElementById('editTags')?.value.trim() || '',
+    is_top: !!document.getElementById('editIsTop')?.checked,
+    status: document.getElementById('editStatus')?.value || 'draft',
+    content: getEditorContent(),
+    updated_at: new Date().toISOString(),
+    editing_id: editingId || null
+  };
+}
+
+function saveDraftToLocal() {
+  try {
+    const key = getDraftStorageKey();
+    const snapshot = buildEditorSnapshot();
+    localStorage.setItem(key, JSON.stringify(snapshot));
+    currentEditorDraftKey = key;
+    editorDirty = false;
+    setEditorSaveState('idle', `已自动保存到本地 ${formatTimeLabel(new Date(snapshot.updated_at))}`);
+  } catch (error) {
+    console.warn('saveDraftToLocal failed', error);
+    setEditorSaveState('saveFailed');
+  }
+}
+
+function loadDraftFromLocal() {
+  const key = getDraftStorageKey();
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    console.warn('loadDraftFromLocal failed', error);
+    return null;
+  }
+}
+
+function clearDraftFromLocal(key = getDraftStorageKey()) {
+  if (!key) return;
+  localStorage.removeItem(key);
+  if (currentEditorDraftKey === key) {
+    currentEditorDraftKey = null;
+  }
+}
+
+function applySnapshotToEditor(snapshot) {
+  if (!snapshot) return;
+
+  suppressAutosave = true;
+  document.getElementById('editTitle').value = snapshot.title || '';
+  document.getElementById('editSummary').value = snapshot.summary || '';
+  applyCoverValue(snapshot.cover_image || '');
+  document.getElementById('editCategory').value = snapshot.category_id ? String(snapshot.category_id) : '';
+  document.getElementById('editTags').value = snapshot.tags || '';
+  document.getElementById('editIsTop').checked = !!snapshot.is_top;
+  document.getElementById('editStatus').value = snapshot.status || (editingId ? 'published' : 'draft');
+  setEditorContent(snapshot.content || '');
+  suppressAutosave = false;
+}
+
+function queueDraftAutosave() {
+  if (suppressAutosave || !getEditorModal() || getEditorModal().style.display !== 'block') return;
+
+  setEditorSaveState('savingLocal');
+  if (autosaveTimer) window.clearTimeout(autosaveTimer);
+  autosaveTimer = window.setTimeout(() => {
+    saveDraftToLocal();
+    autosaveTimer = null;
+  }, AUTOSAVE_DELAY);
+}
+
+function markEditorDirty() {
+  if (suppressAutosave) return;
+  editorDirty = true;
+  setEditorSaveState('idle');
+  queueDraftAutosave();
+}
+
+function resetEditorFields() {
+  suppressAutosave = true;
+  document.getElementById('editTitle').value = '';
+  document.getElementById('editSummary').value = '';
+  document.getElementById('editCover').value = '';
+  document.getElementById('editCategory').value = '';
+  document.getElementById('editTags').value = '';
+  document.getElementById('editIsTop').checked = false;
+  document.getElementById('editStatus').value = editingId ? 'published' : 'draft';
+  setEditorContent('');
+  renderCoverPreview('');
+  suppressAutosave = false;
+}
+
+function bindEditorFieldListeners() {
+  const fieldIds = ['editTitle', 'editSummary', 'editCategory', 'editTags', 'editStatus'];
+  fieldIds.forEach((id) => {
+    const element = document.getElementById(id);
+    if (!element || element.dataset.autosaveBound === 'true') return;
+    element.addEventListener('input', markEditorDirty);
+    element.addEventListener('change', markEditorDirty);
+    element.dataset.autosaveBound = 'true';
+  });
+
+  const checkbox = document.getElementById('editIsTop');
+  if (checkbox && checkbox.dataset.autosaveBound !== 'true') {
+    checkbox.addEventListener('change', markEditorDirty);
+    checkbox.dataset.autosaveBound = 'true';
+  }
+}
+
+function maybeRestoreDraft() {
+  const draft = loadDraftFromLocal();
+  if (!draft) return false;
+
+  const draftUpdatedAt = draft.updated_at ? new Date(draft.updated_at) : new Date();
+  const hasServerTimestamp = Boolean(editingId && currentServerArticleUpdatedAt);
+  const serverUpdatedAt = hasServerTimestamp ? new Date(currentServerArticleUpdatedAt) : null;
+  const isDraftNewerThanServer = !serverUpdatedAt || Number.isNaN(serverUpdatedAt.getTime()) || draftUpdatedAt >= serverUpdatedAt;
+
+  let message = editingId
+    ? `检测到本地草稿（${formatTimeLabel(draftUpdatedAt)}）。\n是否恢复本地草稿？选择“取消”将继续使用服务器版本。`
+    : `检测到未完成的新文章草稿（${formatTimeLabel(draftUpdatedAt)}）。\n是否恢复该草稿？`;
+
+  if (editingId && hasServerTimestamp) {
+    const serverLabel = formatTimeLabel(serverUpdatedAt);
+    const draftLabel = formatTimeLabel(draftUpdatedAt);
+    message = isDraftNewerThanServer
+      ? `检测到较新的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n是否恢复本地草稿？选择“取消”将继续使用服务器版本。`
+      : `检测到较旧的本地草稿（本地 ${draftLabel} / 服务器 ${serverLabel}）。\n仍要恢复该草稿吗？选择“取消”将继续使用服务器版本。`;
+  }
+
+  const shouldRestore = confirm(message);
+  if (!shouldRestore) return false;
+
+  applySnapshotToEditor(draft);
+  currentEditorDraftKey = getDraftStorageKey();
+  setEditorSaveState('idle', `已恢复本地草稿 ${formatTimeLabel(draftUpdatedAt)}`);
+  editorDirty = false;
+  return true;
+}
+
+// Active mainline editor lives in index.html modal. Legacy editor.html is reference-only.
+async function openEditor(id = null) {
+  editingId = id;
+  currentServerArticleUpdatedAt = null;
+  currentEditorDraftKey = getDraftStorageKey();
+  clearFeedback();
+  setEditorModeHint(id ? `编辑文章 #${id}` : '新建文章');
+  document.getElementById('editorTitle').textContent = id ? '编辑文章' : '新建文章';
+  getEditorModal().style.display = 'block';
+
+  bindEditorFieldListeners();
+  initMarkdownEditor();
+  resetEditorFields();
+  setEditorSaveState('idle');
+  editorDirty = false;
+
+  const preloadPromise = Promise.allSettled([
+    loadCategoryOptions(),
+    ensureImageCache()
+  ]);
+
+  if (!id) {
+    const preloadResults = await preloadPromise;
+    const preloadErrors = preloadResults
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message || '未知错误');
+
+    if (preloadErrors.length) {
+      showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
+    }
+
+    const draft = loadDraftFromLocal();
+    const restored = draft ? maybeRestoreDraft() : false;
+    if (!restored) {
+      const randomCover = pickRandomCoverUrl();
+      if (randomCover) applyCoverValue(randomCover);
+    }
+    updateEditorStats(getEditorContent());
+    return;
+  }
+
+  try {
+    showFeedback('正在加载文章详情...', 'info');
+    const json = await requestJson(`${API}/articles/${id}`);
+    const a = json.data;
+    currentServerArticleUpdatedAt = a.updated_at || null;
+    applySnapshotToEditor({
+      title: a.title || '',
+      summary: a.summary || '',
+      cover_image: a.cover_image || '',
+      category_id: a.category_id ? String(a.category_id) : '',
+      tags: a.tags || '',
+      is_top: !!a.is_top,
+      status: a.status || 'published',
+      content: a.content || ''
+    });
+
+    const preloadResults = await preloadPromise;
+    const preloadErrors = preloadResults
+      .filter((result) => result.status === 'rejected')
+      .map((result) => result.reason?.message || '未知错误');
+    const categorySelect = document.getElementById('editCategory');
+    if (categorySelect) {
+      categorySelect.value = a.category_id ? String(a.category_id) : '';
+    }
+
+    if (preloadErrors.length) {
+      showFeedback(`部分编辑器资源加载失败：${preloadErrors.join('；')}。你仍然可以继续编辑，本地草稿也照常可用。`, 'error');
+    } else {
+      clearFeedback();
+    }
+    maybeRestoreDraft();
+    updateEditorStats(getEditorContent());
+    editorDirty = false;
+  } catch (error) {
+    showFeedback(`加载文章详情失败：${error.message}`, 'error');
+  }
+}
+
+function discardEditorDraft() {
+  const draftKey = getDraftStorageKey();
+  const hasLocalDraft = !!loadDraftFromLocal();
+  const hasUnsavedChanges = editorDirty || autosaveTimer;
+
+  if (!hasLocalDraft && !hasUnsavedChanges) {
+    showFeedback('当前没有可放弃的本地草稿。', 'info');
+    return;
+  }
+
+  const message = editingId
+    ? '确定放弃当前本地草稿吗？\n这会清掉本地自动保存内容，并恢复为服务器上的文章版本。'
+    : '确定放弃当前草稿吗？\n这会清空本地自动保存和编辑器里的内容。';
+
+  if (!confirm(message)) return;
+
+  if (autosaveTimer) {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+  }
+
+  clearDraftFromLocal(draftKey);
+  editorDirty = false;
+
+  if (editingId) {
+    openEditor(editingId)
+      .then(() => {
+        setEditorSaveState('idle', '本地草稿已放弃，已恢复服务器版本');
+        showFeedback('本地草稿已放弃，已帮你回到服务器版本。', 'success');
+      })
+      .catch((error) => {
+        showFeedback(`恢复服务器内容失败：${error.message}`, 'error');
+      });
+    return;
+  }
+
+  resetEditorFields();
+  const randomCover = pickRandomCoverUrl();
+  if (randomCover) applyCoverValue(randomCover);
+  updateEditorStats(getEditorContent());
+  setEditorSaveState('idle', '本地草稿已放弃');
+  showFeedback('草稿已放弃，编辑器内容已清空。', 'success');
+}
+
+function closeEditor() {
+  const modal = getEditorModal();
+  if (!modal) return;
+
+  if (editorDirty || autosaveTimer) {
+    const shouldClose = confirm('当前还有未提交到服务器的改动。\n确定关闭吗？本地草稿会保留，稍后可恢复。');
+    if (!shouldClose) return;
+  }
+
+  if (autosaveTimer) {
+    window.clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+    if (editorDirty) saveDraftToLocal();
+  }
+
+  modal.style.display = 'none';
+  closeImagePicker();
+  editingId = null;
+  currentServerArticleUpdatedAt = null;
+  currentEditorDraftKey = null;
+  editorDirty = false;
+  setEditorSaveState('idle');
+  setEditorModeHint('新建文章');
+}
+
+async function saveArticle() {
+  if (isSavingArticle) return;
+
+  const saveButton = document.querySelector('#editorModal .btn.btn-primary');
+  const originalText = saveButton ? saveButton.textContent : '保存';
+  const draftKeyBeforeSave = getDraftStorageKey();
+  const isEditing = !!editingId;
+  const data = {
+    title: document.getElementById('editTitle').value.trim(),
+    summary: document.getElementById('editSummary').value.trim(),
+    cover_image: document.getElementById('editCover').value.trim(),
+    category_id: parseInt(document.getElementById('editCategory').value, 10) || 0,
+    tags: document.getElementById('editTags').value.trim(),
+    is_top: document.getElementById('editIsTop').checked,
+    status: document.getElementById('editStatus').value,
+    content: getEditorContent()
+  };
+
+  if (!data.title) {
+    showFeedback('标题不能为空', 'error');
+    return;
+  }
+
+  const url = isEditing ? `${API}/articles/${editingId}` : `${API}/articles`;
+  const method = isEditing ? 'PUT' : 'POST';
+
+  try {
+    clearFeedback();
+    isSavingArticle = true;
+    if (saveButton) {
+      saveButton.disabled = true;
+      saveButton.textContent = '保存中...';
+    }
+    setEditorSaveState('savingLocal', '正在保存到服务器...');
+    showFeedback(isEditing ? '正在保存文章...' : '正在创建文章...', 'info');
+    const response = await requestJson(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!isEditing && response && response.data && response.data.id) {
+      editingId = response.data.id;
+      currentServerArticleUpdatedAt = response.data.updated_at || null;
+      queueArticleHighlight({
+        id: response.data.id,
+        title: response.data.title || data.title
+      });
+    } else {
+      currentServerArticleUpdatedAt = response?.data?.updated_at || currentServerArticleUpdatedAt;
+      clearPendingArticleHighlight();
+    }
+
+    if (autosaveTimer) {
+      window.clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
+    clearDraftFromLocal(draftKeyBeforeSave);
+    clearDraftFromLocal(getDraftStorageKey());
+    editorDirty = false;
+    setEditorSaveState('savedRemote');
+    closeEditor();
+
+    if (!isEditing && data.status === 'draft') {
+      articleFilters.status = 'draft';
+      articleFilters.search = data.title;
+      articlePagination.page = 1;
+
+      const statusFilter = document.getElementById('articleStatusFilter');
+      const searchInput = document.getElementById('articleSearchInput');
+      if (statusFilter) statusFilter.value = articleFilters.status;
+      if (searchInput) searchInput.value = articleFilters.search;
+    }
+
+    showFeedback(
+      isEditing
+        ? '文章更新成功'
+        : data.status === 'draft'
+          ? '草稿创建成功，已自动切换到草稿列表并定位到对应文章。'
+          : '文章创建成功',
+      'success'
+    );
+    renderArticlesLoading('正在刷新文章列表...');
+    await loadArticles();
+  } catch (error) {
+    showFeedback(`保存失败：${error.message}`, 'error');
+    setEditorSaveState('saveFailed', '保存到服务器失败，本地草稿仍保留');
+  } finally {
+    isSavingArticle = false;
+    if (saveButton) {
+      saveButton.disabled = false;
+      saveButton.textContent = originalText;
+    }
+  }
+}
+
+function loadCategoriesPage() {
+  document.getElementById('content').innerHTML = `
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">✦ 分类中心</div>
+          <h3>分类管理</h3>
+          <p>集中维护内容分类结构，帮助文章更清晰地归档与检索。</p>
+        </div>
+      </div>
+
+      <div id="page-feedback" class="feedback-banner" style="display:none;"></div>
+
+      <div class="category-toolbar">
+        <label class="field compact-field grow">
+          <span>新分类名称</span>
+          <input type="text" id="newCat" placeholder="例如：K3s、运维、前端设计">
+        </label>
+        <button class="btn btn-primary" onclick="addCategory()">添加分类</button>
+      </div>
+
+      <div id="cat-list" class="category-list"></div>
+    </section>
+  `;
+  loadCategories();
+}
+
+async function loadCategories() {
+  const list = document.getElementById('cat-list');
+  if (!list) return;
+  list.innerHTML = renderStateCard('正在加载分类列表...', 'info');
+
+  try {
+    const json = await requestJson(`${API}/categories`);
+    const categories = Array.isArray(json.data) ? json.data : [];
+    list.innerHTML = '';
+
+    if (!categories.length) {
+      list.innerHTML = renderStateCard('当前还没有分类，请先新增分类。', 'empty');
+      return;
+    }
+
+    categories.forEach((cat) => {
+      const div = document.createElement('div');
+      div.className = 'category-card';
+      div.innerHTML = `
+        <div class="category-card-main">
+          <small>Category</small>
+          <strong>${escapeHtml(cat.name)}</strong>
+        </div>
+        <div class="category-card-actions">
+          <button class="btn" onclick="renameCategory(${cat.id}, '${escapeHtml(cat.name).replace(/'/g, '&#39;')}')">重命名</button>
+          <button class="btn btn-danger" onclick="deleteCat(${cat.id})">删除</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  } catch (error) {
+    list.innerHTML = renderStateCard(`加载分类失败：${error.message}`, 'error');
+    showFeedback(`加载分类失败：${error.message}`, 'error');
+  }
+}
+
+async function addCategory() {
+  const input = document.getElementById('newCat');
+  const name = input.value.trim();
+  if (!name) {
+    showFeedback('请输入分类名称', 'error');
+    return;
+  }
+
+  try {
+    showFeedback('正在添加分类...', 'info');
+    await requestJson(`${API}/categories`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name })
+    });
+    input.value = '';
+    articleCategories = [];
+    await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
+    await loadDashboardStats();
+    showFeedback('分类添加成功', 'success');
+  } catch (error) {
+    showFeedback(`添加分类失败：${error.message}`, 'error');
+  }
+}
+
+async function renameCategory(id, currentName) {
+  const nextName = prompt('请输入新的分类名称：', currentName || '');
+  if (nextName === null) return;
+
+  const name = nextName.trim();
+  if (!name) {
+    showFeedback('分类名称不能为空', 'error');
+    return;
+  }
+
+  try {
+    showFeedback('正在重命名分类...', 'info');
+    await requestJson(`${API}/categories/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ name })
+    });
+    articleCategories = [];
+    await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
+    await loadDashboardStats();
+    showFeedback('分类重命名成功', 'success');
+  } catch (error) {
+    showFeedback(`分类重命名失败：${error.message}`, 'error');
+  }
+}
+
+async function deleteCat(id) {
+  if (!confirm('确定删除这个分类吗？')) return;
+  try {
+    showFeedback('正在删除分类...', 'info');
+    await requestJson(`${API}/categories/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    articleCategories = [];
+    await loadCategories();
+    await loadCategoryOptions(articleFilters.categoryId || '', { quiet: true, syncFilter: true });
+    await loadDashboardStats();
+    showFeedback('分类删除成功', 'success');
+  } catch (error) {
+    showFeedback(`删除分类失败：${error.message}`, 'error');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('token');
+  location.href = '/admin/login.html';
+}
+
+async function loadImageHistory() {
+  if (imageCache) {
+    renderImages();
+    return;
+  }
+
+  const list = document.getElementById('imageHistory');
+  if (list) list.innerHTML = renderStateCard('正在加载图片列表...', 'info');
+
+  try {
+    const json = await requestJson(`${API}/images`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    imageCache = Array.isArray(json.data) ? json.data : [];
+    renderImages();
+  } catch (error) {
+    if (list) list.innerHTML = renderStateCard(`加载图片失败：${error.message}`, 'error');
+    showFeedback(`加载图片失败：${error.message}`, 'error');
+  }
+}
+
+function changePage(page) {
+  const total = Math.ceil(imageCache.length / imagePageSize);
+  if (page < 1 || page > total) return;
+  currentImagePage = page;
+  renderImages();
+}
+
+function loadImagesPage() {
+  document.getElementById('content').innerHTML = `
+    <section class="card section-card">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">✦ 素材中心</div>
+          <h3>素材管理</h3>
+          <p>支持拖拽上传、多图管理与批量删除，帮助你统一维护内容素材资源。</p>
+        </div>
+      </div>
+
+      <div id="page-feedback" class="feedback-banner" style="display:none;"></div>
+
+      <div id="uploadArea" class="upload-dropzone">
+        <div class="upload-emoji">🖼️</div>
+        <h4>点击或拖拽图片到这里上传</h4>
+        <p>支持多图上传，上传完成后可直接复制链接用于文章内容编辑。</p>
+        <input type="file" id="imgFile" accept="image/*" multiple style="display:none">
+      </div>
+
+      <div id="uploadResult"></div>
+
+      <div class="images-headline">
+        <h4>图片列表</h4>
+        <p>支持批量删除与逐个复制链接，便于统一管理素材。</p>
+      </div>
+
+      <div id="imageHistory"></div>
+    </section>
+  `;
+  const area = document.getElementById('uploadArea');
+  const input = document.getElementById('imgFile');
+  area.onclick = () => input.click();
+  area.ondragover = (e) => { e.preventDefault(); area.classList.add('dragover'); };
+  area.ondragleave = () => { area.classList.remove('dragover'); };
+  area.ondrop = (e) => {
+    e.preventDefault();
+    area.classList.remove('dragover');
+    if (e.dataTransfer.files.length) uploadMultiple(e.dataTransfer.files);
+  };
+  input.onchange = (e) => { if (e.target.files.length) uploadMultiple(e.target.files); };
+  loadImageHistory();
+}
+
+function uploadMultiple(files) {
+  const result = document.getElementById('uploadResult');
+  result.innerHTML = `
+    <div class="upload-status-card">
+      <strong>上传进行中</strong>
+      <p>正在处理 0/${files.length} 张图片...</p>
+    </div>
+  `;
+
+  let completed = 0;
+  const uploadTasks = Array.from(files).map((file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    return fetch(`${API}/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    }).then(async (response) => {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (error) {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        throw new Error((payload && (payload.error || payload.message)) || `${file.name} 上传失败（${response.status}）`);
+      }
+
+      completed++;
+      result.innerHTML = `
+        <div class="upload-status-card">
+          <strong>上传进行中</strong>
+          <p>正在处理 ${completed}/${files.length} 张图片...</p>
+        </div>
+      `;
+
+      return {
+        name: file.name,
+        success: true
+      };
+    }).catch((error) => ({
+      name: file.name,
+      success: false,
+      error: error.message || '上传失败'
+    }));
+  });
+
+  Promise.all(uploadTasks).then((results) => {
+    const successCount = results.filter((item) => item.success).length;
+    const failedItems = results.filter((item) => !item.success);
+
+    if (!failedItems.length) {
+      result.innerHTML = `
+        <div class="upload-status-card success">
+          <strong>上传完成</strong>
+          <p>✅ 已成功上传 ${successCount} 张图片，可直接用于封面或正文配图。</p>
+        </div>
+      `;
+      showFeedback(`图片上传成功，共 ${successCount} 张。`, 'success');
+    } else {
+      const failedSummary = failedItems
+        .slice(0, 3)
+        .map((item) => `${item.name}：${item.error}`)
+        .join('；');
+      result.innerHTML = `
+        <div class="upload-status-card error">
+          <strong>上传完成（部分失败）</strong>
+          <p>成功 ${successCount} 张，失败 ${failedItems.length} 张。请根据提示检查后重试。</p>
+        </div>
+      `;
+      showFeedback(`上传结果：成功 ${successCount} 张，失败 ${failedItems.length} 张。${failedSummary}`, 'error');
+    }
+
+    imageCache = null;
+    loadImageHistory();
+  });
+}
+
+function toggleSelect(key) {
+  const idx = selectedImages.indexOf(key);
+  if (idx > -1) {
+    selectedImages.splice(idx, 1);
+  } else {
+    selectedImages.push(key);
+  }
+}
+
+function deleteSelected() {
+  if (selectedImages.length === 0) return alert('请先选择要删除的图片');
+  if (!confirm(`确认删除 ${selectedImages.length} 张图片？`)) return;
+
+  Promise.all(selectedImages.map((key) =>
+    fetch(`${API}/images/${key}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+  )).then(() => {
+    imageCache = null;
+    selectedImages = [];
+    loadImageHistory();
+  });
+}
+
+function renderImages() {
+  const list = document.getElementById('imageHistory');
+  if (!list) return;
+
+  const allImages = Array.isArray(imageCache) ? imageCache : [];
+  const total = Math.ceil(allImages.length / imagePageSize) || 1;
+  if (currentImagePage > total) currentImagePage = total;
+
+  if (!allImages.length) {
+    list.innerHTML = renderStateCard('当前素材库为空，请先上传图片。', 'empty');
+    return;
+  }
+
+  const start = (currentImagePage - 1) * imagePageSize;
+  const end = start + imagePageSize;
+  const pageData = allImages.slice(start, end);
+
+  list.innerHTML = `
+    <div class="images-toolbar">
+      <button class="btn btn-danger" onclick="deleteSelected()">删除选中</button>
+      <span>已选择 ${selectedImages.length} 张 / 共 ${allImages.length} 张</span>
+    </div>
+  `;
+
+  const grid = document.createElement('div');
+  grid.className = 'image-grid';
+
+  pageData.forEach((item) => {
+    const div = document.createElement('div');
+    div.className = 'image-card';
+
+    const checked = selectedImages.includes(item.key);
+    div.innerHTML = `
+      <label class="image-select">
+        <input type="checkbox" ${checked ? 'checked' : ''}>
+      </label>
+      <img src="${escapeHtml(item.url)}" alt="uploaded image">
+      <div class="image-card-body">
+        <div class="image-url">${escapeHtml(item.url)}</div>
+        <button class="btn btn-primary">复制链接</button>
+      </div>
+    `;
+
+    const checkbox = div.querySelector('input[type="checkbox"]');
+    checkbox.onchange = () => toggleSelect(item.key);
+    div.querySelector('button').onclick = () => copyUrl(item.url);
+    grid.appendChild(div);
+  });
+
+  list.appendChild(grid);
+
+  if (total > 1) {
+    const pagination = document.createElement('div');
+    pagination.className = 'pagination';
+    pagination.innerHTML = `
+      <button class="btn" onclick="changePage(${currentImagePage - 1})" ${currentImagePage === 1 ? 'disabled' : ''}>上一页</button>
+      <span>第 ${currentImagePage} / ${total} 页</span>
+      <button class="btn" onclick="changePage(${currentImagePage + 1})" ${currentImagePage === total ? 'disabled' : ''}>下一页</button>
+    `;
+    list.appendChild(pagination);
+  }
+}
+
+async function copyUrl(url) {
+  if (!url) {
+    showFeedback('没有可复制的素材链接。', 'error');
+    return;
+  }
+
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showFeedback('链接已复制，可以快乐贴图了 ✨', 'success');
+      return;
+    } catch (error) {
+      console.warn('navigator.clipboard failed, falling back to execCommand', error);
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = url;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand('copy');
+    showFeedback('链接已复制，可以快乐贴图了 ✨', 'success');
+  } catch (err) {
+    showFeedback('复制失败，请手动复制素材链接。', 'error');
+  }
+  document.body.removeChild(textarea);
+}
+
+document.addEventListener('keydown', (event) => {
+  const modal = getEditorModal();
+  if (!modal || modal.style.display !== 'block') return;
+  if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 's') return;
+
+  event.preventDefault();
+  saveArticle();
+});
+
+window.addEventListener('beforeunload', (event) => {
+  if (!(editorDirty || autosaveTimer)) return;
+  event.preventDefault();
+  event.returnValue = '';
+});
+
+loadDashboardStats();
+loadArticlesPage();

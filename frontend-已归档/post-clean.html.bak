@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title id="page-title">文章详情 | Alexcld</title>
+  <meta name="author" content="Alex">
+  <link rel="shortcut icon" href="https://img.alexcld.com/img/author.png">
+  <link rel="stylesheet" href="/css/index.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+#article-container{font-size:1.05rem;line-height:1.8;color:#4c4948}
+#article-container h1,#article-container h2,#article-container h3{margin:2rem 0 1rem;color:#1f2d3d;font-weight:600}
+#article-container h1{font-size:2rem;border-bottom:2px solid #49b1f5;padding-bottom:0.5rem}
+#article-container h2{font-size:1.6rem}
+#article-container h3{font-size:1.3rem}
+#article-container p{margin-bottom:1.2rem}
+#article-container code{background:#f6f6f6;padding:0.2rem 0.5rem;border-radius:3px;font-family:Consolas,monospace;font-size:0.9em;color:#e96900}
+#article-container pre{position:relative;background:#2d2d2d;color:#f8f8f2;padding:1.2rem;border-radius:6px;overflow-x:auto;margin:1.5rem 0}
+#article-container pre code{background:none;padding:0;color:inherit}
+#article-container blockquote{border-left:4px solid #49b1f5;background:#f8f9fa;padding:1rem 1.5rem;margin:1.5rem 0;color:#666}
+#article-container ul,#article-container ol{margin-left:2rem;margin-bottom:1.2rem}
+#article-container li{margin-bottom:0.5rem}
+#article-container a{color:#49b1f5;text-decoration:none}
+#article-container a:hover{border-bottom:1px solid #49b1f5}
+#article-container img{max-width:100%;border-radius:6px;margin:1.5rem 0;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
+#article-container table{width:100%;border-collapse:collapse;margin:1.5rem 0}
+#article-container table th,#article-container table td{border:1px solid #ddd;padding:0.8rem}
+#article-container table th{background:#f6f6f6;font-weight:600}
+.code-copy-btn{position:absolute;top:0.5rem;right:0.5rem;padding:0.3rem 0.8rem;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:4px;cursor:pointer;font-size:0.85rem;transition:all 0.3s}
+.code-copy-btn:hover{background:rgba(255,255,255,0.2)}
+.code-copy-btn.copied{background:#52c41a;border-color:#52c41a}
+  </style>
+</head>
+<body>
+<div id="sidebar">
+  <div id="menu-mask"></div>
+  <div id="sidebar-menus">
+    <div class="author-avatar">
+      <img class="avatar-img" src="https://img.alexcld.com/img/author.png" alt="avatar"/>
+    </div>
+    <div class="menus_items">
+      <div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div>
+      <div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div>
+      <div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div>
+      <div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 博主</span></a></div>
+    </div>
+  </div>
+</div>
+<div id="body-wrap">
+  <header class="post-bg" id="page-header" style="background-image:url(https://img.alexcld.com/img/topbackground.jpg)">
+    <nav id="nav">
+      <span id="blog_name"><a id="site-name" href="/">Alexcld</a></span>
+      <span id="menus">
+        <div class="menus_items">
+          <div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div>
+          <div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 时间轴</span></a></div>
+          <div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div>
+          <div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 博主</span></a></div>
+        </div>
+      </span>
+    </nav>
+    <div id="post-info">
+      <h1 class="post-title" id="article-title">加载中...</h1>
+      <div id="post-meta">
+        <div class="meta-firstline">
+          <span class="post-meta-date"><i class="far fa-calendar-alt fa-fw"></i><time id="article-date">-</time></span>
+        </div>
+        <div class="meta-secondline">
+          <span class="post-meta-pv-cv"><i class="far fa-eye fa-fw"></i><span id="article-views">0</span></span>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main class="layout" id="content-inner">
+    <div id="post">
+      <article class="post-content" id="article-container"><p>加载中...</p></article>
+    </div>
+  </main>
+</div>
+<script>
+const API='http://172.28.74.191:30083/api';
+const id=new URLSearchParams(window.location.search).get('id');
+if(!id){document.getElementById('article-container').innerHTML='<p>文章不存在</p>';}
+else{fetch(`${API}/articles/${id}`).then(res=>res.json()).then(json=>{
+if(json.data){const article=json.data;
+document.getElementById('page-title').textContent=article.title+' | Alexcld';
+document.getElementById('article-title').textContent=article.title;
+document.getElementById('article-date').textContent=new Date(article.created_at).toLocaleDateString('zh-CN');
+document.getElementById('article-views').textContent=article.views||0;
+document.getElementById('article-container').innerHTML=marked.parse(article.content||'');
+addCopyButtons();
+}else{document.getElementById('article-container').innerHTML='<p>文章不存在</p>';}
+}).catch(error=>{document.getElementById('article-container').innerHTML='<p>加载失败</p>';});}
+function addCopyButtons(){document.querySelectorAll('#article-container pre').forEach(pre=>{
+const btn=document.createElement('button');btn.className='code-copy-btn';btn.textContent='复制';
+btn.onclick=function(){const code=pre.querySelector('code').textContent;
+navigator.clipboard.writeText(code).then(()=>{btn.textContent='已复制';btn.classList.add('copied');
+setTimeout(()=>{btn.textContent='复制';btn.classList.remove('copied');},2000);});};
+pre.appendChild(btn);});}
+</script>
+</body>
+</html>

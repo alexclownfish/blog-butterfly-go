@@ -16,18 +16,17 @@
 
 项目当前由三层组成：
 
-1. **Frontend**：静态前端页面
-2. **Admin Frontend**：后台管理 UI，位于 `frontend/admin`
+1. **web-vue**：前台站点，Vue 3 + Vite 构建后的静态页面
+2. **admin-vue**：后台管理 UI，Vue 3 + Vite 管理端
 3. **Backend API**：Go 服务，位于 `backend`
 
 ### 2.1 逻辑关系
 
 ```text
 浏览器
-  ├─ 访问前台静态页面（Nginx）
-  └─ 访问后台页面 /admin/*.html
+  ├─ 访问 web-vue 前台页面（Nginx）
+  └─ 访问 admin-vue 后台页面（Nginx）
           │
-          ├─ /js/config.js 解析 API_BASE
           └─ 调用 http://172.28.74.191:31083/api
                     │
                     ├─ Gin Router
@@ -40,13 +39,13 @@
 
 ### 2.2 当前主线说明
 
-当前后台主编辑流已经明确固定在：
+当前前端主线已经明确切换为：
 
-- `frontend/admin/index.html`
-- `frontend/admin/app.js`
-- `frontend/admin/style.css`
+- `web-vue/`：前台站点主线
+- `admin-vue/`：后台管理主线
+- `frontend-已归档/`：历史静态实现归档目录
 
-此前存在的旧版独立页面（如 `frontend/admin/editor.html`、`frontend/admin/images.html`）已在主线 modal 工作流稳定后清理移除。
+旧 `frontend/` 内容已转入 `frontend-已归档/`，仅保留历史参考，不再作为现役实现。
 
 ---
 
@@ -69,16 +68,25 @@ blog-butterfly-go/
 │   │   ├── jwt.go
 │   │   └── qiniu.go
 │   └── Dockerfile
-├── frontend/
+├── web-vue/
+│   ├── src/
+│   ├── public/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── admin-vue/
+│   ├── src/
+│   ├── public/
+│   ├── Dockerfile
+│   └── nginx.conf
+├── frontend-已归档/
 │   ├── admin/
-│   │   ├── index.html
-│   │   ├── app.js
-│   │   └── style.css
-│   ├── js/config.js
+│   ├── js/
 │   └── Dockerfile
 ├── k8s/
 │   ├── backend.yaml
-│   └── frontend.yaml
+│   ├── web-vue.yaml
+│   ├── admin-vue.yaml
+│   └── frontend-已归档.yaml
 ├── deploy.sh
 └── docs/
 ```
@@ -89,27 +97,24 @@ blog-butterfly-go/
 
 ## 4.1 前端技术选型
 
-后台前端当前不是 React/Vue 应用，而是原生实现：
+当前前端主线已经切换为两个 Vue 3 + Vite 应用：
 
-- HTML
-- CSS
-- Vanilla JavaScript
-- EasyMDE（Markdown 编辑器）
+- `web-vue`：前台站点
+- `admin-vue`：后台管理端
 
 这种设计的优点：
-- 结构简单
-- 部署轻量
-- 易于直接在静态资源上改动
+- 前后台职责更清晰
+- 组件化与状态管理更适合持续演进
+- 与现代前端构建/部署方式一致
 
-缺点：
-- 页面状态集中在单个 `app.js` 中
-- 模块化和可维护性会随功能增长而下降
+需要注意：
+- `frontend-已归档/` 仅保留历史参考，不应继续承担主线开发
 
 ---
 
 ## 4.2 API Base 解析
 
-`frontend/js/config.js` 用于确定后端 API 地址。
+`web-vue` 与 `admin-vue` 均通过各自前端配置访问后端 API；旧 `frontend-已归档/js/config.js` 仅保留历史参考。
 
 当前默认值：
 - `http://172.28.74.191:31083/api`
@@ -121,13 +126,13 @@ blog-butterfly-go/
 4. `localStorage['api_base']`
 5. 默认值
 
-这意味着后台前端是“可注入 API 地址”的，但默认仍依赖固定公网地址。
+这意味着现役前端应继续保持可配置 API 地址能力；固定公网地址仅应视为当前部署默认值。
 
 ---
 
 ## 4.3 后台页面结构
 
-`frontend/admin/index.html` 由以下几部分组成：
+`admin-vue` 后台页面由路由、页面视图与复用组件共同组成：
 
 1. 左侧导航栏
    - 文章管理
@@ -490,106 +495,11 @@ blog-butterfly-go/
 - 暴露端口：`8080`
 - 复制 `config.ini`
 
-### Frontend Dockerfile
-- 基于 `nginx:alpine`
-- 将整个 `frontend` 目录复制到 `/usr/share/nginx/html`
+### web-vue / admin-vue Dockerfile
+- 基于 Node 20 执行前端构建
+- 构建产物通过 `nginx:alpine` 对外提供静态服务
 - 暴露端口：`80`
 
 ---
 
 ## 6.2 Kubernetes
-
-### Backend
-`k8s/backend.yaml`
-- Deployment：2 副本
-- 镜像：`blog-butterfly-backend:latest`
-- `imagePullPolicy: Never`
-- Service 类型：`NodePort`
-- NodePort：`31083`
-
-### Frontend
-`k8s/frontend.yaml`
-- Deployment：2 副本
-- 镜像：`blog-butterfly-frontend:latest`
-- `imagePullPolicy: Never`
-- Service 类型：`NodePort`
-- NodePort：`31084`
-
-### 部署脚本
-`deploy.sh`：
-1. 构建 backend 镜像
-2. 构建 frontend 镜像
-3. `kubectl apply -f backend.yaml`
-4. `kubectl apply -f frontend.yaml`
-
-脚本输出中的访问地址仍写为：
-- `http://172.28.74.191:30082`
-
-但现有 K8s YAML 中前端 NodePort 是 `31084`，说明部署脚本文案与当前资源文件并不完全一致。
-
----
-
-## 7. 关键设计决策
-
-### 7.1 保持后台主编辑流在 modal 内
-原因：
-- 当前 `index.html + app.js` 已成为真实主线
-- 避免继续分裂为多个旧页面
-- 降低维护成本
-
-### 7.2 复用 EasyMDE 而不是引入大型前端框架
-原因：
-- 当前项目是静态后台
-- 目标是快速增强 Markdown 创作体验
-- 复用已有遗留经验成本最低
-
-### 7.3 草稿优先保存在本地
-原因：
-- 不需要新增后端草稿接口
-- 实现复杂度低
-- 足以解决“误关闭、误刷新、内容丢失”核心问题
-
-### 7.4 图片能力直接复用现有七牛接口
-原因：
-- 后端已有上传 / 列表 / 删除能力
-- 前端已有素材页与 imageCache 基础
-- 适合快速把图床接入正文编辑器工作流
-
----
-
-## 8. 当前技术债
-
-1. `app.js` 体量较大，前端逻辑集中度高
-2. 数据库 DSN 硬编码
-3. JWT 默认密钥回退不安全
-4. 七牛配置未环境变量化
-5. 前端默认 API 地址硬编码为公网地址
-6. `deploy.sh` 与 K8s 实际端口存在不一致
-7. 素材接口与文章接口返回结构不完全统一
-8. `/uploads` 静态目录已挂载，但当前主素材流依赖七牛，并非本地上传目录
-
----
-
-## 9. 后续演进建议
-
-### 短期
-- 保持现有 modal 编辑器主线
-- 补齐产品/设计/部署文档
-- 修正 `deploy.sh` 中访问地址与端口不一致问题
-
-### 中期
-- 将敏感配置迁移到环境变量
-- 将前端 `app.js` 拆分为更清晰的模块
-- 统一 API 返回格式
-
-### 长期
-- 若后台继续复杂化，再考虑前端组件化或框架化重构
-- 若需要跨设备草稿同步，再引入服务端草稿能力
-
----
-
-## 10. 相关文档
-
-- `docs/PRD.md`
-- `docs/PRD-admin-content-workspace-p2.md`
-- `docs/plans/admin-content-workspace-p2-implementation-plan.md`

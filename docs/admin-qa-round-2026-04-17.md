@@ -1,3 +1,5 @@
+> **归档说明**：本文档中的 `frontend/admin/*` 路径属于旧原生后台 QA 记录，当前仅保留历史参考；现役后台主线已切换为 `admin-vue`。
+
 # 管理后台验收问题记录（本轮）
 
 项目：`/root/blog-butterfly-go`

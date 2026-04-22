@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>归档 | Alexcld</title>
+  <meta name="description" content="Alexcld 博客归档页，按时间线查看全部文章。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: rgba(10, 14, 31, 0.78);
+      --panel-strong: rgba(10, 14, 31, 0.92);
+      --border: rgba(255,255,255,0.1);
+      --text: #f5f7ff;
+      --muted: #97a0c3;
+      --muted-strong: #c6ccef;
+      --brand: #7c8cff;
+      --brand-2: #4de2c5;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --container: 1240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,140,255,0.22), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(77,226,197,0.16), transparent 25%),
+        linear-gradient(180deg, #070b1b 0%, #050816 45%, #040611 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      opacity: 0.45;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .site-shell {
+      position: relative;
+      z-index: 1;
+      padding: 28px 0 72px;
+    }
+
+    .container {
+      width: min(var(--container), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.16);
+      position: sticky;
+      top: 18px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 30px rgba(124,140,255,0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .nav-dropdown {
+      position: relative;
+    }
+
+    .nav-dropdown summary {
+      list-style: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .nav-dropdown summary::-webkit-details-marker { display: none; }
+
+    .nav-caret {
+      font-size: 0.76rem;
+      transition: transform .2s ease;
+    }
+
+    .nav-dropdown[open] summary {
+      color: white;
+      border-color: rgba(124,140,255,0.35);
+      background: rgba(124,140,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .nav-dropdown[open] .nav-caret { transform: rotate(180deg); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-dropdown:hover summary {
+        color: white;
+        border-color: rgba(124,140,255,0.26);
+        background: rgba(124,140,255,0.1);
+      }
+
+      .nav-dropdown:hover .nav-caret { transform: rotate(180deg); }
+
+      .nav-dropdown:hover .nav-menu,
+      .nav-dropdown:focus-within .nav-menu,
+      .nav-dropdown[open] .nav-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    .nav-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      min-width: 190px;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8, 12, 28, 0.96);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.32);
+      backdrop-filter: blur(18px);
+      display: grid;
+      gap: 6px;
+      z-index: 40;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+    }
+
+    .nav-dropdown[open] .nav-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      color: var(--muted-strong);
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .nav-link:hover {
+      color: white;
+      background: rgba(124,140,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .nav-link.current {
+      color: white;
+      background: linear-gradient(135deg, rgba(124,140,255,0.22), rgba(77,226,197,0.12));
+      border: 1px solid rgba(124,140,255,0.24);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .nav-link small {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .nav-link.current small,
+    .nav-link:hover small {
+      color: var(--muted-strong);
+    }
+
+    .hero {
+      margin-top: 26px;
+      padding: 38px;
+      border-radius: calc(var(--radius-xl) + 8px);
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.18), rgba(255,255,255,0.04) 42%, rgba(77,226,197,0.12)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 380px;
+      height: 380px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124,140,255,0.35), transparent 65%);
+      right: -140px;
+      top: -140px;
+      pointer-events: none;
+    }
+
+    .hero-content { position: relative; z-index: 1; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbe1ff;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .hero-title {
+      font-size: clamp(2.05rem, 4.1vw, 4rem);
+      line-height: 1.03;
+      letter-spacing: -0.045em;
+      max-width: 10ch;
+      margin-bottom: 16px;
+    }
+
+    .hero-summary {
+      max-width: 68ch;
+      color: var(--muted-strong);
+      font-size: 1.05rem;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .hero-stat {
+      padding: 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hero-stat small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .hero-stat strong {
+      font-size: 1.8rem;
+      letter-spacing: -0.05em;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 22px;
+      align-items: start;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-body { padding: 28px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .section-head h2 {
+      font-size: 1.4rem;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p,
+    .muted {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .timeline-group + .timeline-group {
+      margin-top: 28px;
+      padding-top: 28px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .year-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .year-chip {
+      display: inline-flex;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(124,140,255,0.24), rgba(77,226,197,0.14));
+      border: 1px solid rgba(124,140,255,0.24);
+      font-weight: 700;
+    }
+
+    .year-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(124,140,255,0.5), rgba(255,255,255,0.04));
+    }
+
+    .timeline-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 122px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .timeline-item:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124,140,255,0.26);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .timeline-date {
+      color: var(--muted-strong);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    .timeline-link {
+      display: inline-block;
+      font-size: 1.02rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .timeline-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .aside-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 104px;
+    }
+
+    .quick-links {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .quick-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .quick-link:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124,140,255,0.26);
+    }
+
+    .status, .empty-state {
+      padding: 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--muted-strong);
+    }
+
+    .footer {
+      margin-top: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 960px) {
+      .content-grid { grid-template-columns: 1fr; }
+      .aside-stack { position: static; }
+      .hero-stats { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        border-radius: 24px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .hero,
+      .card-body { padding: 22px; }
+      .timeline-item {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .timeline-date { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <div class="site-shell">
+    <div class="container">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <div class="brand-mark">A</div>
+          <div class="brand-copy">
+            <strong>children don't lie</strong>
+            <span>导航 / 技术记录 / 运维 / 开发</span>
+          </div>
+        </a>
+        <div class="topbar-meta">
+          <details class="nav-dropdown">
+            <summary class="pill">导航 <span class="nav-caret">▾</span></summary>
+            <div class="nav-menu">
+              <a class="nav-link" href="/"><span>首页</span><small>Home</small></a>
+              <a class="nav-link" href="/categories/"><span>分类</span><small>Categories</small></a>
+              <a class="nav-link" href="/archives/"><span>归档</span><small>Archives</small></a>
+              <a class="nav-link" href="/about/"><span>博主</span><small>About</small></a>
+            </div>
+          </details>
+          <span class="pill">技术记录</span>
+          <span class="pill">运维</span>
+          <span class="pill">开发</span>
+          <span class="pill" id="topbar-status">归档读取中…</span>
+        </div>
+      </header>
+
+      <section class="hero card">
+        <div class="hero-content">
+          <div class="eyebrow">📚 档案馆模式</div>
+          <h1 class="hero-title">按时间线翻完整个博客</h1>
+          <p class="hero-summary">这里会把所有文章按年份归拢，适合想一口气从旧坑看到新坑的朋友。越往下翻，越能看到这个站是怎么从青涩小白一步步长成技术档案馆的。</p>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <small>文章总数</small>
+              <strong id="stat-total">--</strong>
+            </div>
+            <div class="hero-stat">
+              <small>活跃年份</small>
+              <strong id="stat-years">--</strong>
+            </div>
+            <div class="hero-stat">
+              <small>最近更新</small>
+              <strong id="stat-latest">--</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-grid">
+        <main class="card">
+          <div class="card-body">
+            <div class="section-head">
+              <div>
+                <h2>时间轴归档</h2>
+                <p>按年份分组，点击标题直接进入文章详情页。</p>
+              </div>
+              <div class="muted" id="archive-summary">正在整理时光碎片…</div>
+            </div>
+            <div id="archive-list"></div>
+          </div>
+        </main>
+
+        <aside class="aside-stack">
+          <section class="card">
+            <div class="card-body">
+              <div class="section-head">
+                <div>
+                  <h2>快速跳转</h2>
+                  <p>怕迷路？给你几扇任意门。</p>
+                </div>
+              </div>
+              <div class="quick-links">
+                <a class="quick-link" href="/"> <span>返回首页</span><span>→</span></a>
+                <a class="quick-link" href="/categories/"> <span>查看分类</span><span>→</span></a>
+                <a class="quick-link" href="/about/"> <span>认识博主</span><span>→</span></a>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-body">
+              <div class="section-head">
+                <div>
+                  <h2>小提示</h2>
+                  <p>归档页适合老文章考古。</p>
+                </div>
+              </div>
+              <div class="status">如果你是从首页搜索结果跳过来的，也可以先记住文章标题，再回首页用搜索继续精确打击 🎯</div>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="footer">© Alexcld · Timeline but make it shiny ✨</footer>
+    </div>
+  </div>
+
+  <script src="/js/config.js"></script>
+  <script>
+    function initTopNavigation() {
+      const nav = document.querySelector('.nav-dropdown');
+      if (!nav) return;
+
+      const currentPath = window.location.pathname.replace(/\/index\.html$/, '/') || '/';
+      nav.querySelectorAll('.nav-link').forEach((link) => {
+        const href = (link.getAttribute('href') || '').replace(/\/index\.html$/, '/') || '/';
+        if (href === currentPath) link.classList.add('current');
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!nav.open) return;
+        if (!nav.contains(event.target)) nav.removeAttribute('open');
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') nav.removeAttribute('open');
+      });
+
+      nav.querySelectorAll('.nav-link').forEach((link) => {
+        link.addEventListener('click', () => nav.removeAttribute('open'));
+      });
+    }
+
+    initTopNavigation();
+
+    const API = window.getApiBase();
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+
+    function formatDate(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '未知日期';
+      return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      }).format(date);
+    }
+
+    function formatMonthDay(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '未知时间';
+      return new Intl.DateTimeFormat('zh-CN', {
+        month: '2-digit',
+        day: '2-digit'
+      }).format(date);
+    }
+
+    async function loadArchives() {
+      const container = document.getElementById('archive-list');
+      const summary = document.getElementById('archive-summary');
+      const topbarStatus = document.getElementById('topbar-status');
+
+      try {
+        const res = await fetch(`${API}/articles?page=1&page_size=100`);
+        const json = await res.json();
+        const articles = Array.isArray(json.data) ? json.data.slice() : [];
+
+        if (!articles.length) {
+          container.innerHTML = '<div class="empty-state">暂时还没有归档内容，可能博主正在憋大招。</div>';
+          summary.textContent = '0 篇文章';
+          topbarStatus.textContent = '暂时空空';
+          document.getElementById('stat-total').textContent = '0';
+          document.getElementById('stat-years').textContent = '0';
+          document.getElementById('stat-latest').textContent = '--';
+          return;
+        }
+
+        articles.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+        const groups = new Map();
+        for (const article of articles) {
+          const year = new Date(article.created_at).getFullYear() || '未知';
+          if (!groups.has(year)) groups.set(year, []);
+          groups.get(year).push(article);
+        }
+
+        const years = Array.from(groups.keys()).sort((a, b) => Number(b) - Number(a));
+        container.innerHTML = years.map((year) => {
+          const items = groups.get(year) || [];
+          return `
+            <section class="timeline-group">
+              <div class="year-row">
+                <div class="year-chip">${escapeHtml(year)}</div>
+                <div class="year-line"></div>
+              </div>
+              <div class="timeline-list">
+                ${items.map((article) => `
+                  <a class="timeline-item" href="/post.html?id=${encodeURIComponent(article.id)}&from=${encodeURIComponent('/archives/')}">
+                    <div class="timeline-date">${escapeHtml(formatMonthDay(article.created_at))}</div>
+                    <div>
+                      <div class="timeline-link">${escapeHtml(article.title || '未命名文章')}</div>
+                      <div class="timeline-meta">
+                        <span>📅 ${escapeHtml(formatDate(article.created_at))}</span>
+                        <span>👁️ ${escapeHtml(article.views ?? 0)} 次阅读</span>
+                        <span>🧩 ID ${escapeHtml(article.id)}</span>
+                      </div>
+                    </div>
+                  </a>
+                `).join('')}
+              </div>
+            </section>
+          `;
+        }).join('');
+
+        const latest = articles[0];
+        document.getElementById('stat-total').textContent = String(articles.length);
+        document.getElementById('stat-years').textContent = String(years.length);
+        document.getElementById('stat-latest').textContent = formatMonthDay(latest.created_at);
+        summary.textContent = `${articles.length} 篇文章，按 ${years.length} 个年份整理完成`;
+        topbarStatus.textContent = '归档已就绪';
+      } catch (error) {
+        console.error(error);
+        container.innerHTML = '<div class="empty-state">归档加载失败了，可能 API 在摸鱼。稍后再来拍拍它。</div>';
+        summary.textContent = '加载失败';
+        topbarStatus.textContent = '读取失败';
+      }
+    }
+
+    loadArchives();
+  </script>
+</body>
+</html>

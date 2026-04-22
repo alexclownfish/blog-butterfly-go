@@ -1,27 +1,29 @@
+> **归档说明**：本文档记录的是旧 `frontend/admin` 原生后台阶段的实施计划，仅作为历史上下文保留；当前现役后台主线已切换为 `admin-vue`。
+
 # Admin Content Workspace P2 Implementation Plan
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
 **Goal:** Upgrade the current admin article modal into a content-creation workspace with Markdown editing/preview, unified image picking for cover/body, and local draft autosave.
 
-**Architecture:** Keep the active admin mainline on `frontend/admin/index.html + app.js + style.css`. Do not revive `frontend/admin/editor.html` as the primary workflow. Build features incrementally around the existing modal editor and existing image API endpoints.
+**Architecture:** This plan originally targeted `frontend/admin/index.html + app.js + style.css` (now archived). Do not revive `frontend/admin/editor.html` as the primary workflow; treat it as archived history. Build features incrementally around the existing modal editor and existing image API endpoints.
 
-**Tech Stack:** Vanilla HTML/CSS/JS admin frontend, Go + Gin backend, existing article/category/image endpoints, browser `localStorage`, EasyMDE (preferred reuse path).
+**Tech Stack (historical):** Vanilla HTML/CSS/JS admin frontend, Go + Gin backend, existing article/category/image endpoints, browser `localStorage`, EasyMDE (preferred reuse path).
 
 ---
 
-## 0. Current codebase facts to preserve
+## 0. Historical codebase facts captured at planning time
 
-### Active frontend files
-- `frontend/admin/index.html` — active admin shell and article edit modal
-- `frontend/admin/app.js` — active admin behavior, article CRUD, image management, cover preview
-- `frontend/admin/style.css` — active admin layout and component styles
+### Historical active frontend files (now archived)
+- `frontend/admin/index.html` — then-active admin shell and article edit modal
+- `frontend/admin/app.js` — then-active admin behavior, article CRUD, image management, cover preview
+- `frontend/admin/style.css` — then-active admin layout and component styles
 
-### Legacy files
+### Historical legacy files
 - `frontend/admin/editor.html` — legacy standalone editor page with EasyMDE (historical, removed after modal workflow stabilized)
 - `frontend/admin/images.html` — legacy standalone image page (historical, removed after modal workflow stabilized)
 
-### Active backend files
+### Active backend files at planning time
 - `backend/controllers/article.go` — article CRUD and status handling
 - `backend/controllers/upload.go` — image upload/list/delete
 - `backend/router/router.go` — API routes

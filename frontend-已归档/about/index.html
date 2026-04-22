@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About | Alexcld</title>
+  <meta name="description" content="Alexcld 的关于页：这是 AKA Alex，children don't lie。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050816;
+      --panel: rgba(10, 14, 31, 0.78);
+      --panel-strong: rgba(10, 14, 31, 0.92);
+      --border: rgba(255,255,255,0.1);
+      --text: #f5f7ff;
+      --muted: #97a0c3;
+      --muted-strong: #c6ccef;
+      --brand: #7c8cff;
+      --brand-2: #4de2c5;
+      --accent: #8f5cff;
+      --shadow: 0 24px 80px rgba(0,0,0,0.35);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --container: 1240px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Geist', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,140,255,0.22), transparent 35%),
+        radial-gradient(circle at 85% 15%, rgba(77,226,197,0.16), transparent 25%),
+        linear-gradient(180deg, #070b1b 0%, #050816 45%, #040611 100%);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 85%);
+      opacity: 0.45;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .site-shell {
+      position: relative;
+      z-index: 1;
+      padding: 28px 0 72px;
+    }
+
+    .container {
+      width: min(var(--container), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      padding: 14px 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.16);
+      position: sticky;
+      top: 18px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--brand), var(--brand-2));
+      color: white;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 12px 30px rgba(124,140,255,0.28);
+      flex-shrink: 0;
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: -0.03em;
+    }
+
+    .brand-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.84rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+      white-space: nowrap;
+    }
+
+    .nav-dropdown {
+      position: relative;
+    }
+
+    .nav-dropdown summary {
+      list-style: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      transition: background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .nav-dropdown summary::-webkit-details-marker { display: none; }
+
+    .nav-caret {
+      font-size: 0.76rem;
+      transition: transform .2s ease;
+    }
+
+    .nav-dropdown[open] summary {
+      color: white;
+      border-color: rgba(124,140,255,0.35);
+      background: rgba(124,140,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .nav-dropdown[open] .nav-caret { transform: rotate(180deg); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .nav-dropdown:hover summary {
+        color: white;
+        border-color: rgba(124,140,255,0.26);
+        background: rgba(124,140,255,0.1);
+      }
+
+      .nav-dropdown:hover .nav-caret { transform: rotate(180deg); }
+
+      .nav-dropdown:hover .nav-menu,
+      .nav-dropdown:focus-within .nav-menu,
+      .nav-dropdown[open] .nav-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    .nav-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      min-width: 190px;
+      padding: 10px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8, 12, 28, 0.96);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.32);
+      backdrop-filter: blur(18px);
+      display: grid;
+      gap: 6px;
+      z-index: 40;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(6px);
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease, visibility .18s ease;
+    }
+
+    .nav-dropdown[open] .nav-menu {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      color: var(--muted-strong);
+      transition: background .2s ease, color .2s ease, transform .2s ease;
+    }
+
+    .nav-link:hover {
+      color: white;
+      background: rgba(124,140,255,0.14);
+      transform: translateY(-1px);
+    }
+
+    .nav-link.current {
+      color: white;
+      background: linear-gradient(135deg, rgba(124,140,255,0.22), rgba(77,226,197,0.12));
+      border: 1px solid rgba(124,140,255,0.24);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .nav-link small {
+      color: var(--muted);
+      font-size: 0.78rem;
+    }
+
+    .nav-link.current small,
+    .nav-link:hover small {
+      color: var(--muted-strong);
+    }
+
+    .hero {
+      margin-top: 26px;
+      padding: 42px;
+      border-radius: calc(var(--radius-xl) + 8px);
+      background:
+        linear-gradient(135deg, rgba(124,140,255,0.18), rgba(255,255,255,0.04) 42%, rgba(77,226,197,0.12)),
+        rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.9fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .hero::after {
+      content: '';
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(143,92,255,0.28), transparent 65%);
+      right: -160px;
+      top: -160px;
+      pointer-events: none;
+    }
+
+    .hero-copy,
+    .hero-side {
+      position: relative;
+      z-index: 1;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbe1ff;
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 4.3vw, 4.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+      max-width: 10ch;
+      margin-bottom: 18px;
+    }
+
+    .hero p {
+      max-width: 62ch;
+      color: var(--muted-strong);
+      font-size: 1.04rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: transform .2s ease, border-color .2s ease, background .2s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--brand), #93a0ff);
+      color: white;
+      box-shadow: 0 10px 30px rgba(124,140,255,0.3);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+    }
+
+    .profile-card,
+    .card,
+    .contact-card,
+    .quote-card {
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg);
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .profile-card {
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+      align-content: start;
+    }
+
+    .avatar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .avatar {
+      width: 74px;
+      height: 74px;
+      border-radius: 24px;
+      object-fit: cover;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+    }
+
+    .profile-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+    }
+
+    .profile-role {
+      color: var(--muted-strong);
+    }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat-box {
+      padding: 14px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat-box small {
+      display: block;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-box strong {
+      font-size: 1.15rem;
+      letter-spacing: -0.04em;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 22px;
+      align-items: start;
+      margin-top: 24px;
+    }
+
+    .card-body { padding: 28px; }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .section-head h2 {
+      font-size: 1.4rem;
+      letter-spacing: -0.04em;
+    }
+
+    .section-head p,
+    .muted,
+    .card p {
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    .intro-grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .intro-block {
+      padding: 20px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .intro-block h3 {
+      margin-bottom: 10px;
+      font-size: 1.08rem;
+      letter-spacing: -0.03em;
+    }
+
+    .chip-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .chip {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted-strong);
+      font-size: 0.88rem;
+    }
+
+    .link-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .link-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform .2s ease, border-color .2s ease;
+    }
+
+    .link-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124,140,255,0.28);
+    }
+
+    .link-card strong {
+      display: block;
+      margin-bottom: 4px;
+      letter-spacing: -0.03em;
+    }
+
+    .aside-stack {
+      display: grid;
+      gap: 18px;
+      position: sticky;
+      top: 104px;
+    }
+
+    .quote-card,
+    .contact-card {
+      padding: 22px;
+    }
+
+    .quote-card blockquote {
+      font-size: 1.06rem;
+      color: #eef2ff;
+      margin-bottom: 10px;
+    }
+
+    .list {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .list-item {
+      padding: 14px 16px;
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--muted-strong);
+    }
+
+    .footer {
+      margin-top: 28px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 960px) {
+      .hero,
+      .content-grid { grid-template-columns: 1fr; }
+      .aside-stack { position: static; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar {
+        border-radius: 24px;
+        align-items: flex-start;
+        flex-direction: column;
+      }
+      .hero,
+      .card-body,
+      .profile-card,
+      .quote-card,
+      .contact-card { padding: 22px; }
+      .avatar-wrap,
+      .profile-stats { grid-template-columns: 1fr; }
+      .avatar-wrap { flex-direction: column; align-items: flex-start; }
+      .profile-stats { display: grid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="site-shell">
+    <div class="container">
+      <header class="topbar">
+        <a class="brand" href="/">
+          <div class="brand-mark">A</div>
+          <div class="brand-copy">
+            <strong>children don't lie</strong>
+            <span>导航 / 技术记录 / 运维 / 开发</span>
+          </div>
+        </a>
+        <div class="topbar-meta">
+          <details class="nav-dropdown">
+            <summary class="pill">导航 <span class="nav-caret">▾</span></summary>
+            <div class="nav-menu">
+              <a class="nav-link" href="/"><span>首页</span><small>Home</small></a>
+              <a class="nav-link" href="/categories/"><span>分类</span><small>Categories</small></a>
+              <a class="nav-link" href="/archives/"><span>归档</span><small>Archives</small></a>
+              <a class="nav-link" href="/about/"><span>博主</span><small>About</small></a>
+            </div>
+          </details>
+          <span class="pill">技术记录</span>
+          <span class="pill">运维</span>
+          <span class="pill">开发</span>
+          <span class="pill">关于页已就绪</span>
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">🫶 About the human behind the posts</div>
+          <h1>This is AKA Alex, respect yeah.</h1>
+          <p>这里是 Alexcld 的关于页。老站里那些有点中二、但很真诚的自我介绍，我都保留了气质：纯属小白不是大佬、喜欢折腾、愿意分享、欢迎交流。现在只是换成了更现代的展示方式，灵魂没有被装修队偷走。</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/alexclownfish" target="_blank" rel="noopener">GitHub 快速通道</a>
+            <a class="btn btn-secondary" href="https://me.csdn.net/weixin_45509582" target="_blank" rel="noopener">CSDN 快速通道</a>
+          </div>
+        </div>
+
+        <aside class="profile-card hero-side">
+          <div class="avatar-wrap">
+            <img class="avatar" src="https://img.alexcld.com/img/author.png" alt="Alex avatar" onerror="this.onerror=null;this.src='/img/friend_404.gif'">
+            <div>
+              <div class="profile-name">Alex</div>
+              <div class="profile-role">children don't lie</div>
+            </div>
+          </div>
+          <div class="profile-stats">
+            <div class="stat-box">
+              <small>站点身份</small>
+              <strong>博主</strong>
+            </div>
+            <div class="stat-box">
+              <small>自我定位</small>
+              <strong>小白升级中</strong>
+            </div>
+            <div class="stat-box">
+              <small>交流方式</small>
+              <strong>友链 / 评论 / 外链</strong>
+            </div>
+          </div>
+          <div class="chip-row">
+            <span class="chip">Kubernetes</span>
+            <span class="chip">Docker</span>
+            <span class="chip">监控体系</span>
+            <span class="chip">博客折腾</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content-grid">
+        <main class="card">
+          <div class="card-body">
+            <div class="section-head">
+              <div>
+                <h2>关于我</h2>
+                <p>把老 about 页的内容重组成人能舒服阅读的样子。</p>
+              </div>
+              <div class="muted">No fake guru vibes</div>
+            </div>
+
+            <div class="intro-grid">
+              <section class="intro-block">
+                <h3>1. 一个很真诚的开场</h3>
+                <p>123。没错，老页面开头就是这么随性，像一句没删掉的调试输出，也像一种毫不掩饰的真实。技术博客有时候最可爱的地方，就是它不像官方宣传页，它更像一个人在互联网上留下的工作台痕迹。</p>
+              </section>
+
+              <section class="intro-block">
+                <h3>2. This is AKA Alex, respect yeah</h3>
+                <p>这句我保留了。因为它很像一句签名：不端着，不装腔，带点少年气，也带点“来都来了，看看我都折腾了啥”的邀请意味。</p>
+              </section>
+
+              <section class="intro-block">
+                <h3>3. 纯属小白不是大佬</h3>
+                <p>这是老页面里我最喜欢的一句。它比“十年架构师手把手教学”可爱太多了。这个站记录的不是摆拍式成功学，而是真实的踩坑、排障、部署、修复、再继续折腾。</p>
+              </section>
+
+              <section class="intro-block">
+                <h3>4. 欢迎交流与友链</h3>
+                <p>老页面提到“友链右上方评论”，我理解成一句很朴素的社交邀请：如果你也在折腾同类技术，欢迎留言、交流、互相串门。互联网最初的浪漫，本来就该这样。</p>
+              </section>
+            </div>
+          </div>
+        </main>
+
+        <aside class="aside-stack">
+          <section class="quote-card">
+            <blockquote>“纯属小白不是大佬。”</blockquote>
+            <p>但正因为如此，这里的经验才更像真实世界，而不是摆拍现场。</p>
+          </section>
+
+          <section class="contact-card">
+            <div class="section-head">
+              <div>
+                <h2>快速通道</h2>
+                <p>老 about 页里最重要的外链，我都给你放这了。</p>
+              </div>
+            </div>
+            <div class="link-grid">
+              <a class="link-card" href="https://me.csdn.net/weixin_45509582" target="_blank" rel="noopener">
+                <div>
+                  <strong>CSDN 快速通道</strong>
+                  <span class="muted">去看更多技术记录与账号主页</span>
+                </div>
+                <span>↗</span>
+              </a>
+              <a class="link-card" href="https://github.com/alexclownfish" target="_blank" rel="noopener">
+                <div>
+                  <strong>GitHub 快速通道</strong>
+                  <span class="muted">去看仓库、代码和公开痕迹</span>
+                </div>
+                <span>↗</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-body">
+              <div class="section-head">
+                <div>
+                  <h2>这个站在写什么</h2>
+                  <p>大概就是这些方向。</p>
+                </div>
+              </div>
+              <div class="list">
+                <div class="list-item">⚙️ 运维部署、系统排障、容器与服务</div>
+                <div class="list-item">☸️ Kubernetes / KubeSphere / 监控体系</div>
+                <div class="list-item">🧪 一边踩坑一边记笔记的真实实践</div>
+                <div class="list-item">📝 博客本身的功能折腾和前端改造</div>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </section>
+
+      <footer class="footer">© Alexcld · respect yeah ✨</footer>
+    </div>
+  </div>
+  <script src="/js/config.js"></script>
+  <script>
+    function initTopNavigation() {
+      const nav = document.querySelector('.nav-dropdown');
+      if (!nav) return;
+
+      const currentPath = window.location.pathname.replace(/\/index\.html$/, '/') || '/';
+      nav.querySelectorAll('.nav-link').forEach((link) => {
+        const href = (link.getAttribute('href') || '').replace(/\/index\.html$/, '/') || '/';
+        if (href === currentPath) link.classList.add('current');
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!nav.open) return;
+        if (!nav.contains(event.target)) nav.removeAttribute('open');
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') nav.removeAttribute('open');
+      });
+
+      nav.querySelectorAll('.nav-link').forEach((link) => {
+        link.addEventListener('click', () => nav.removeAttribute('open'));
+      });
+    }
+
+    initTopNavigation();
+  </script>
+</body>
+</html>
