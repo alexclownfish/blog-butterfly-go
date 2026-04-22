@@ -251,7 +251,8 @@ blog-butterfly-go/
 ├── k8s/                   # Kubernetes 部署清单
 ├── docs/                  # PRD / 设计文档 / 实施计划
 ├── frontend-已归档/       # 历史静态前端，仅供参考
-└── deploy.sh              # 构建并部署现役三件套
+├── deploy.sh              # install.sh 的兼容入口
+└── install.sh             # 构建并部署现役三件套（支持数据库模式切换）
 ```
 
 ### 现役目录
@@ -310,36 +311,143 @@ npm test
 
 ## 7. 部署方式
 
-仓库根目录提供 `deploy.sh`：
+仓库根目录提供 `install.sh`（`deploy.sh` 只是兼容转发入口）：
 
 ```bash
-./deploy.sh
+./install.sh
 ```
 
-脚本当前会按顺序执行：
+默认脚本会按顺序执行：
 
 1. 构建 `backend` Docker 镜像
 2. 构建 `web-vue` Docker 镜像
 3. 构建 `admin-vue` Docker 镜像
-4. 在 `k8s/` 目录应用 Kubernetes 资源
+4. 创建命名空间 `blog-butterfly-go`
+5. 部署 `k8s/mysql.yaml` 中的独立 MySQL（默认）
+6. 部署 `backend` / `web-vue` / `admin-vue`
 
-也就是说，这个脚本部署的就是当前现役三件套，而不是归档前端。
+也就是说，这个脚本部署的是当前现役三件套，并且默认会把数据库一并拉起来，而不是只顾着业务服务自己热血冲锋。
+
+### 可选参数
+
+```bash
+# 默认：构建镜像 + 部署内置 MySQL + 部署三件套
+./install.sh
+
+# 跳过镜像构建，只重放 Kubernetes 资源
+./install.sh --skip-build
+
+# 不部署数据库，保留当前 mysql 服务
+./install.sh --skip-db
+
+# 改为使用外部 mysql.default.svc.cluster.local
+./install.sh --use-external-db
+```
+
+其中：
+
+- `k8s/mysql.yaml`：在 `blog-butterfly-go` 命名空间内独立部署 MySQL 8，并创建 `blog` 数据库
+- `k8s/mysql-alias.yaml`：将 `mysql` 服务名转发到 `mysql.default.svc.cluster.local`
+
+`--skip-db` 与 `--use-external-db` 互斥，避免脚本一边说“我不要数据库”，一边又去连外部数据库，上演逻辑分裂现场。
 
 ### 当前暴露地址
 
-根据 `deploy.sh` 与 `k8s/*.yaml`，当前对外地址为：
+根据 `install.sh` 与 `k8s/*.yaml`，当前对外地址为：
 
 - 前台：`http://172.28.74.191:31086`
 - 后台：`http://172.28.74.191:31085`
 - API：`http://172.28.74.191:31083/api`
 
+### Docker Compose 一键部署
+
+如果你不想走 K3s / Kubernetes，也可以直接使用 Docker Compose。
+
+#### 方式一：仓库内直接执行
+
+```bash
+./script/install-docker-compose.sh
+```
+
+兼容入口仍保留：
+
+```bash
+./install-docker.sh
+```
+
+#### 方式二：远程一条命令拉起
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh | bash
+```
+
+> 如果仓库默认分支或 raw 地址后续变化，请按实际 GitHub 地址调整。你给的目标入口是 `script/install-docker-compose.sh`，所以脚本已放在该路径。
+
+脚本行为：
+
+1. 检查是否已安装 Docker
+2. 检查是否可用 `docker compose`
+3. 若未安装，则自动安装 Docker Engine 与 Docker Compose Plugin
+4. 若已安装，则自动跳过安装
+5. 启动 `mysql:8.0`
+6. 构建并启动 `backend`
+7. 构建并启动 `web-vue`
+8. 构建并启动 `admin-vue`
+
+默认端口：
+
+- 前台：`http://127.0.0.1:8086`
+- 后台：`http://127.0.0.1:8085`
+- API：`http://127.0.0.1:8083/api`
+- MySQL：`127.0.0.1:3306`
+
+常用命令：
+
+```bash
+# 一键构建并启动
+./script/install-docker-compose.sh
+
+# 兼容入口
+./install-docker.sh
+
+# 直接启动已有镜像，不重新 build
+./script/install-docker-compose.sh --no-build
+
+# 若不想自动安装 docker / compose，缺失时直接退出
+./script/install-docker-compose.sh --skip-install-docker
+
+# 停止并删除服务
+./script/install-docker-compose.sh --down
+
+# 查看状态
+docker compose -f docker-compose.yml ps
+
+# 查看后端日志
+docker compose -f docker-compose.yml logs -f backend
+```
+
+相关文件：
+
+- `script/install-docker-compose.sh`
+- `install-docker.sh`
+- `docker-compose.yml`
+- `web-vue/Dockerfile.compose`
+- `admin-vue/Dockerfile.compose`
+- `web-vue/nginx.compose.conf`
+- `admin-vue/nginx.compose.conf`
+
+> 注意：当前前后台 Compose 版 Nginx 会把 `/api` 反代到 Compose 网络中的 `backend:8080`，这是给 Docker 场景单独准备的，不影响现有 K8s 配置。
+
 ### Kubernetes 资源
 
 - 命名空间：`blog-butterfly-go`
+- 数据库 Deployment：`mysql`
+- 数据库 PVC：`mysql-data`（默认申请 `10Gi`）
 - 后端 Service：NodePort `31083`
 - 后台 Service：NodePort `31085`
 - 前台 Service：NodePort `31086`
-- `k8s/mysql-alias.yaml` 使用 `ExternalName` 将 `mysql` 指向 `mysql.default.svc.cluster.local`
+- 默认数据库 Service：`mysql:3306`
+- `k8s/mysql-alias.yaml` 可选使用 `ExternalName` 将 `mysql` 指向 `mysql.default.svc.cluster.local`
 
 ---
 
@@ -347,7 +455,13 @@ npm test
 
 ### 数据库
 
-当前 `backend/config/database.go` 中数据库 DSN 仍为硬编码方式，并通过 Kubernetes 内 `mysql` 服务名连接数据库。
+当前 `backend/config/database.go` 中数据库 DSN 仍为硬编码方式：
+
+```text
+root:ywz0207.@tcp(mysql:3306)/blog?charset=utf8mb4&parseTime=True
+```
+
+因此无论是内置 MySQL 还是外部别名模式，Kubernetes 内都必须保证 `blog-butterfly-go` 命名空间下存在可解析的 `mysql:3306` 服务名。
 
 ### JWT
 

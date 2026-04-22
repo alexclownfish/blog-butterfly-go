@@ -3,4 +3,4 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-exec "$ROOT_DIR/install.sh" "$@"
+exec "$ROOT_DIR/script/install-docker-compose.sh" "$@"

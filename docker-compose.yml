@@ -1,0 +1,63 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: blog-butterfly-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ywz0207.
+      MYSQL_DATABASE: blog
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    ports:
+      - "3306:3306"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: blog-butterfly-backend:compose
+    container_name: blog-butterfly-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DEFAULT_ADMIN_USERNAME: admin
+      DEFAULT_ADMIN_PASSWORD: ChangeMe123!
+    ports:
+      - "8083:8080"
+
+  web-vue:
+    build:
+      context: ./web-vue
+      dockerfile: Dockerfile.compose
+    image: blog-butterfly-web-vue:compose
+    container_name: blog-butterfly-web-vue
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8086:80"
+
+  admin-vue:
+    build:
+      context: ./admin-vue
+      dockerfile: Dockerfile.compose
+    image: blog-butterfly-admin-vue:compose
+    container_name: blog-butterfly-admin-vue
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8085:80"
+
+volumes:
+  mysql-data:
