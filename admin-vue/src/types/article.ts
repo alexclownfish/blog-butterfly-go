@@ -46,6 +46,22 @@ export interface ArticleEditorForm {
   status: ArticleStatus
 }
 
+export interface CsdnArticlePreview {
+  title: string
+  summary?: string
+  content?: string
+  cover_image?: string
+  tags?: string
+  source_url?: string
+  source_platform?: string
+}
+
+export interface CsdnArticleImportPayload {
+  url: string
+  category_id: number
+  status: ArticleStatus
+}
+
 export function createDefaultArticleForm(): ArticleEditorForm {
   return {
     title: '',

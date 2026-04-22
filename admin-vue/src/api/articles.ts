@@ -3,7 +3,9 @@ import type {
   Article,
   ArticleEditorForm,
   ArticleListQuery,
-  ArticleListResponse
+  ArticleListResponse,
+  CsdnArticleImportPayload,
+  CsdnArticlePreview
 } from '@/types/article'
 
 export async function fetchArticlesApi(params: ArticleListQuery) {
@@ -39,4 +41,26 @@ export async function updateArticleApi(id: number, payload: ArticleEditorForm) {
 export async function deleteArticleApi(id: number) {
   const { data } = await client.delete(`/articles/${id}`)
   return data
+}
+
+export async function previewImportCsdnApi(payload: { url: string }): Promise<CsdnArticlePreview> {
+  const { data } = await client.post<{ data?: CsdnArticlePreview; message?: string }>(
+    '/articles/import/csdn/preview',
+    payload
+  )
+  if (!data?.data) {
+    throw new Error(data?.message || '未获取到 CSDN 预览结果')
+  }
+  return data.data
+}
+
+export async function importCsdnArticleApi(payload: CsdnArticleImportPayload): Promise<Article> {
+  const { data } = await client.post<{ data?: Article; message?: string }>(
+    '/articles/import/csdn',
+    payload
+  )
+  if (!data?.data) {
+    throw new Error(data?.message || '导入 CSDN 文章失败')
+  }
+  return data.data
 }

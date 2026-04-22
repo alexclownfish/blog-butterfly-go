@@ -38,6 +38,8 @@ func SetupRoutes(r *gin.Engine) {
 			auth.POST("/articles", controllers.CreateArticle)
 			auth.PUT("/articles/:id", controllers.UpdateArticle)
 			auth.DELETE("/articles/:id", controllers.DeleteArticle)
+			auth.POST("/articles/import/csdn/preview", controllers.PreviewCSDNArticle)
+			auth.POST("/articles/import/csdn", controllers.ImportCSDNArticle)
 			auth.POST("/categories", controllers.CreateCategory)
 			auth.PUT("/categories/:id", controllers.UpdateCategory)
 			auth.DELETE("/categories/:id", controllers.DeleteCategory)

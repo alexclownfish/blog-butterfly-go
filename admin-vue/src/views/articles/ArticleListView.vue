@@ -8,7 +8,10 @@
           <p>先跑通列表、筛选、分页和真实接口读取。</p>
         </div>
 
-        <el-button type="primary" @click="handleCreate">新建文章</el-button>
+        <div class="section-head__actions">
+          <el-button @click="csdnImportVisible = true">导入 CSDN</el-button>
+          <el-button type="primary" @click="handleCreate">新建文章</el-button>
+        </div>
       </div>
 
       <div class="filter-bar">
@@ -96,6 +99,12 @@
       :categories="categories"
       @saved="handleSaved"
     />
+
+    <CsdnImportDialog
+      v-model="csdnImportVisible"
+      :categories="categories"
+      @imported="handleImported"
+    />
   </section>
 </template>
 
@@ -107,12 +116,14 @@ import { fetchCategoriesApi } from '@/api/categories'
 import type { Article } from '@/types/article'
 import type { Category } from '@/types/category'
 import ArticleEditorDialog from '@/components/article/ArticleEditorDialog.vue'
+import CsdnImportDialog from '@/components/article/CsdnImportDialog.vue'
 import { formatDateTime } from '@/utils/date'
 
 const loading = ref(false)
 const articles = ref<Article[]>([])
 const categories = ref<Category[]>([])
 const editorVisible = ref(false)
+const csdnImportVisible = ref(false)
 const currentArticleId = ref<number | null>(null)
 
 const filters = reactive({
@@ -128,7 +139,16 @@ const pagination = reactive({
 })
 
 async function loadCategories() {
-  categories.value = await fetchCategoriesApi()
+  try {
+    categories.value = await fetchCategoriesApi()
+  } catch (error: any) {
+    ElMessage.error(
+      error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        '加载分类失败'
+    )
+  }
 }
 
 async function loadArticles() {
@@ -186,6 +206,11 @@ function handleEdit(id: number) {
 
 async function handleSaved() {
   editorVisible.value = false
+  await loadArticles()
+}
+
+async function handleImported() {
+  csdnImportVisible.value = false
   await loadArticles()
 }
 

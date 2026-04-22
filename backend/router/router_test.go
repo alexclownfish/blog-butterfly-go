@@ -52,3 +52,33 @@ func TestSetupRoutesRegistersProtectedCategoryUpdateEndpoint(t *testing.T) {
 		t.Fatalf("expected status 401, got %d, body=%s", w.Code, w.Body.String())
 	}
 }
+
+func TestSetupRoutesRegistersProtectedCSDNPreviewEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	SetupRoutes(r)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/articles/import/csdn/preview", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d, body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestSetupRoutesRegistersProtectedCSDNImportEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+
+	SetupRoutes(r)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/articles/import/csdn", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d, body=%s", w.Code, w.Body.String())
+	}
+}
