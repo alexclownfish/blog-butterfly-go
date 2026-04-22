@@ -395,6 +395,10 @@ curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/mai
 # 同时指定安装目录 + 分支
 curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh \
   | INSTALL_DIR=/opt/blog-v2 REPO_REF=dev bash
+
+# 指定基础镜像代理前缀（适合 Docker Hub 访问慢/超时环境）
+curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/main/script/install-docker-compose.sh \
+  | IMAGE_REGISTRY_PREFIX=docker.m.daocloud.io/library/ bash
 ```
 
 > 如果仓库默认分支或 raw 地址后续变化，请按实际 GitHub 地址调整。你给的目标入口是 `script/install-docker-compose.sh`，所以脚本已放在该路径。
@@ -402,6 +406,8 @@ curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/mai
 > 说明：
 > - `INSTALL_DIR` 默认值为 `/opt/blog-butterfly-go`
 > - `REPO_REF` 默认值为 `main`
+> - `IMAGE_REGISTRY_PREFIX` 默认值为 `docker.m.daocloud.io/library/`
+> - 如果机器访问 `docker.io` 很慢，可优先使用镜像代理前缀，避免拉基础镜像时卡死在海外链路
 
 脚本行为：
 

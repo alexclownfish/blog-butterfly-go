@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   mysql:
     image: mysql:8.0
@@ -23,6 +21,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        IMAGE_REGISTRY_PREFIX: ${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}
     image: blog-butterfly-backend:compose
     container_name: blog-butterfly-backend
     restart: unless-stopped
@@ -39,6 +39,8 @@ services:
     build:
       context: ./web-vue
       dockerfile: Dockerfile.compose
+      args:
+        IMAGE_REGISTRY_PREFIX: ${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}
     image: blog-butterfly-web-vue:compose
     container_name: blog-butterfly-web-vue
     restart: unless-stopped
@@ -51,6 +53,8 @@ services:
     build:
       context: ./admin-vue
       dockerfile: Dockerfile.compose
+      args:
+        IMAGE_REGISTRY_PREFIX: ${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}
     image: blog-butterfly-admin-vue:compose
     container_name: blog-butterfly-admin-vue
     restart: unless-stopped

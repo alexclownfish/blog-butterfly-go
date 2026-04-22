@@ -12,6 +12,7 @@ INSTALL_DOCKER_IF_MISSING=1
 REPO_URL="${REPO_URL:-https://github.com/alexclownfish/blog-butterfly-go.git}"
 REPO_REF="${REPO_REF:-main}"
 INSTALL_DIR="${INSTALL_DIR:-/opt/blog-butterfly-go}"
+IMAGE_REGISTRY_PREFIX="${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}"
 SCRIPT_INVOKED_FROM_PIPE=0
 if [[ ! -f "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]:-}" == "bash" || "${BASH_SOURCE[0]:-}" == "-bash" ]]; then
   SCRIPT_INVOKED_FROM_PIPE=1
@@ -32,6 +33,7 @@ usage() {
   INSTALL_DIR                 远程安装目录，默认 /opt/blog-butterfly-go
   REPO_URL                    仓库地址，默认 https://github.com/alexclownfish/blog-butterfly-go.git
   REPO_REF                    仓库分支/标签/提交，默认 main
+  IMAGE_REGISTRY_PREFIX       构建基础镜像前缀，默认 docker.m.daocloud.io/library/
 
 说明:
   - 若系统未安装 Docker，本脚本会自动尝试安装 Docker Engine 与 Docker Compose Plugin
@@ -269,15 +271,15 @@ cd "$ROOT_DIR"
 
 if [[ "$ACTION" == "down" ]]; then
   log "🛑 停止并删除 Docker Compose 服务..."
-  docker compose -f "$COMPOSE_FILE" down
+  IMAGE_REGISTRY_PREFIX="$IMAGE_REGISTRY_PREFIX" docker compose -f "$COMPOSE_FILE" down
   exit 0
 fi
 
 log "🐳 启动 Docker Compose 服务..."
 if [[ -n "$BUILD_FLAG" ]]; then
-  docker compose -f "$COMPOSE_FILE" up -d --build
+  IMAGE_REGISTRY_PREFIX="$IMAGE_REGISTRY_PREFIX" docker compose -f "$COMPOSE_FILE" up -d --build
 else
-  docker compose -f "$COMPOSE_FILE" up -d
+  IMAGE_REGISTRY_PREFIX="$IMAGE_REGISTRY_PREFIX" docker compose -f "$COMPOSE_FILE" up -d
 fi
 
 cat <<EOF
