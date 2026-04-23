@@ -3,8 +3,25 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { getToken } from '@/utils/auth'
 
+function getRuntimeApiBase() {
+  if (typeof window === 'undefined') {
+    return import.meta.env.VITE_API_BASE || '/api'
+  }
+
+  const candidates = [
+    window.localStorage?.getItem('api_base'),
+    (window as any).APP_CONFIG?.apiBase,
+    (window as any).API_BASE,
+    document.documentElement?.dataset?.apiBase,
+    import.meta.env.VITE_API_BASE,
+    '/api'
+  ]
+
+  return candidates.find((value) => typeof value === 'string' && value.trim()) || '/api'
+}
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE,
+  baseURL: getRuntimeApiBase(),
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
@@ -12,6 +29,8 @@ const client = axios.create({
 })
 
 client.interceptors.request.use((config) => {
+  config.baseURL = getRuntimeApiBase()
+
   const token = getToken()
   if (token) {
     config.headers.Authorization = `Bearer ${token}`

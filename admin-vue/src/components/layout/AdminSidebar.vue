@@ -21,6 +21,11 @@
         <span>文章管理</span>
       </RouterLink>
 
+      <RouterLink to="/articles/csdn-sync" class="sidebar-link">
+        <span>🪄</span>
+        <span>CSDN 同步导入</span>
+      </RouterLink>
+
       <RouterLink to="/categories" class="sidebar-link">
         <span>🗂️</span>
         <span>分类管理</span>

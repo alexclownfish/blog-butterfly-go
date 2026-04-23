@@ -52,6 +52,14 @@ const router = createRouter({
           }
         },
         {
+          path: 'articles/csdn-sync',
+          name: 'articles-csdn-sync',
+          component: () => import('@/views/articles/CsdnSyncView.vue'),
+          meta: {
+            title: 'CSDN 同步导入'
+          }
+        },
+        {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/categories/CategoryListView.vue'),

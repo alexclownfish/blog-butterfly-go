@@ -5,7 +5,9 @@ import type {
   ArticleListQuery,
   ArticleListResponse,
   CsdnArticleImportPayload,
-  CsdnArticlePreview
+  CsdnArticlePreview,
+  CsdnSyncArticleImportPayload,
+  CsdnSyncSession
 } from '@/types/article'
 
 export async function fetchArticlesApi(params: ArticleListQuery) {
@@ -61,6 +63,30 @@ export async function importCsdnArticleApi(payload: CsdnArticleImportPayload): P
   )
   if (!data?.data) {
     throw new Error(data?.message || '导入 CSDN 文章失败')
+  }
+  return data.data
+}
+
+export async function startCsdnSyncLoginApi(): Promise<CsdnSyncSession> {
+  const { data } = await client.post<{ data?: CsdnSyncSession; message?: string }>('/csdn/sync/login')
+  if (!data?.data) {
+    throw new Error(data?.message || '创建 CSDN 同步登录会话失败')
+  }
+  return data.data
+}
+
+export async function fetchCsdnSyncSessionApi(sessionID: string): Promise<CsdnSyncSession> {
+  const { data } = await client.get<{ data?: CsdnSyncSession; message?: string }>(`/csdn/sync/sessions/${sessionID}`)
+  if (!data?.data) {
+    throw new Error(data?.message || '获取 CSDN 同步会话失败')
+  }
+  return data.data
+}
+
+export async function importCsdnSyncArticleApi(payload: CsdnSyncArticleImportPayload): Promise<Article> {
+  const { data } = await client.post<{ data?: Article; message?: string }>('/csdn/sync/import', payload)
+  if (!data?.data) {
+    throw new Error(data?.message || '导入 CSDN 同步文章失败')
   }
   return data.data
 }

@@ -9,6 +9,7 @@
         </div>
 
         <div class="section-head__actions">
+          <el-button @click="goToCsdnSync">CSDN 同步导入中心</el-button>
           <el-button @click="csdnImportVisible = true">导入 CSDN</el-button>
           <el-button type="primary" @click="handleCreate">新建文章</el-button>
         </div>
@@ -110,6 +111,7 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { fetchArticlesApi, deleteArticleApi } from '@/api/articles'
 import { fetchCategoriesApi } from '@/api/categories'
@@ -119,6 +121,7 @@ import ArticleEditorDialog from '@/components/article/ArticleEditorDialog.vue'
 import CsdnImportDialog from '@/components/article/CsdnImportDialog.vue'
 import { formatDateTime } from '@/utils/date'
 
+const router = useRouter()
 const loading = ref(false)
 const articles = ref<Article[]>([])
 const categories = ref<Category[]>([])
@@ -192,6 +195,10 @@ function handleReset() {
 function handlePageChange(page: number) {
   pagination.page = page
   loadArticles()
+}
+
+function goToCsdnSync() {
+  router.push('/articles/csdn-sync')
 }
 
 function handleCreate() {

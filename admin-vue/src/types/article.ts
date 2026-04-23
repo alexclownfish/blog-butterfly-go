@@ -62,6 +62,40 @@ export interface CsdnArticleImportPayload {
   status: ArticleStatus
 }
 
+export type CsdnSyncSessionStatus = 'pending' | 'scanned' | 'authorized' | 'expired' | 'failed'
+
+export interface CsdnSyncRemoteArticle {
+  id: string
+  title: string
+  summary?: string
+  cover_image?: string
+  source_url?: string
+  published_at?: string
+}
+
+export interface CsdnSyncSession {
+  id: string
+  user_id?: number
+  provider: string
+  provider_mode: string
+  provider_session?: string
+  status: CsdnSyncSessionStatus
+  message?: string
+  error_message?: string
+  qr_code_data_url?: string
+  expires_at?: string
+  created_at?: string
+  updated_at?: string
+  articles?: CsdnSyncRemoteArticle[]
+}
+
+export interface CsdnSyncArticleImportPayload {
+  session_id: string
+  article_id: string
+  category_id: number
+  status: ArticleStatus
+}
+
 export function createDefaultArticleForm(): ArticleEditorForm {
   return {
     title: '',
