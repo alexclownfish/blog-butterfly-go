@@ -3,7 +3,9 @@ package services
 import (
 	"blog-backend/config"
 	"blog-backend/models"
+	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,6 +106,26 @@ func TestCSDNSyncServiceStartLoginStoresSession(t *testing.T) {
 	}
 	if stored.QRCodeDataURL == "" {
 		t.Fatalf("expected qr data url to be persisted")
+	}
+}
+
+func TestBuildStubQRCodeDataURLReturnsBase64DataURI(t *testing.T) {
+	value := buildStubQRCodeDataURL("provider-session")
+	const prefix = "data:image/svg+xml;base64,"
+	if !strings.HasPrefix(value, prefix) {
+		t.Fatalf("expected base64 data uri prefix, got %q", value)
+	}
+	encoded := strings.TrimPrefix(value, prefix)
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatalf("expected valid base64 payload, got %v", err)
+	}
+	decodedText := string(decoded)
+	if !strings.Contains(decodedText, "Stub QR") {
+		t.Fatalf("expected svg label in payload, got %q", decodedText)
+	}
+	if !strings.Contains(decodedText, "provider-session") {
+		t.Fatalf("expected provider session in payload, got %q", decodedText)
 	}
 }
 

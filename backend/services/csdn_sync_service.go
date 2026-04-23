@@ -4,6 +4,7 @@ import (
 	"blog-backend/config"
 	"blog-backend/models"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -274,8 +275,9 @@ func newCSDNSyncSessionID() (string, error) {
 }
 
 func buildStubQRCodeDataURL(content string) string {
-	return "data:image/svg+xml;utf8," + fmt.Sprintf(
+	svg := fmt.Sprintf(
 		`<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220"><rect width="220" height="220" rx="24" fill="#0f172a"/><rect x="24" y="24" width="172" height="172" rx="18" fill="#ffffff"/><text x="110" y="86" text-anchor="middle" font-size="18" fill="#111827" font-family="Arial">CSDN</text><text x="110" y="116" text-anchor="middle" font-size="18" fill="#111827" font-family="Arial">Stub QR</text><text x="110" y="150" text-anchor="middle" font-size="11" fill="#475569" font-family="Arial">%s</text></svg>`,
 		content,
 	)
+	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg))
 }
