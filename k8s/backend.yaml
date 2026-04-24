@@ -17,6 +17,11 @@ spec:
       - name: backend
         image: blog-butterfly-backend:latest
         imagePullPolicy: Never
+        env:
+        - name: CSDN_SYNC_PROVIDER_MODE
+          value: "real"
+        - name: CSDN_SYNC_BASE_URL
+          value: "http://csdn-sync-provider:8091"
         ports:
         - containerPort: 8080
 ---
