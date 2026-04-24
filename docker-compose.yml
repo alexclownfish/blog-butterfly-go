@@ -17,6 +17,20 @@ services:
     ports:
       - "3306:3306"
 
+  csdn-sync-provider:
+    build:
+      context: ./csdn-sync-provider
+      dockerfile: Dockerfile
+      args:
+        IMAGE_REGISTRY_PREFIX: ${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}
+    image: blog-butterfly-csdn-sync-provider:compose
+    container_name: blog-butterfly-csdn-sync-provider
+    restart: unless-stopped
+    env_file:
+      - ./csdn-sync-provider/.env.example
+    ports:
+      - "8091:8091"
+
   backend:
     build:
       context: ./backend
@@ -29,9 +43,13 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      csdn-sync-provider:
+        condition: service_started
     environment:
       DEFAULT_ADMIN_USERNAME: admin
       DEFAULT_ADMIN_PASSWORD: ChangeMe123!
+      CSDN_SYNC_PROVIDER_MODE: real
+      CSDN_SYNC_BASE_URL: http://csdn-sync-provider:8091
     ports:
       - "8083:8080"
 

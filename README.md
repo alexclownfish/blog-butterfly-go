@@ -416,15 +416,17 @@ curl -fsSL https://raw.githubusercontent.com/alexclownfish/blog-butterfly-go/mai
 3. 若未安装，则自动安装 Docker Engine 与 Docker Compose Plugin
 4. 若已安装，则自动跳过安装
 5. 启动 `mysql:8.0`
-6. 构建并启动 `backend`
-7. 构建并启动 `web-vue`
-8. 构建并启动 `admin-vue`
+6. 启动 `csdn-sync-provider`（独立 CSDN sync provider 骨架服务，端口 `8091`）
+7. 构建并启动 `backend`
+8. 构建并启动 `web-vue`
+9. 构建并启动 `admin-vue`
 
 默认端口：
 
 - 前台：`http://127.0.0.1:8086`
 - 后台：`http://127.0.0.1:8085`
 - API：`http://127.0.0.1:8083/api`
+- CSDN provider：`http://127.0.0.1:8091`
 - MySQL：`127.0.0.1:3306`
 
 常用命令：
@@ -457,12 +459,17 @@ docker compose -f docker-compose.yml logs -f backend
 - `script/install-docker-compose.sh`
 - `install-docker.sh`
 - `docker-compose.yml`
+- `csdn-sync-provider/`
+- `csdn-sync-provider/.env.example`
+- `csdn-sync-provider/README.md`
 - `web-vue/Dockerfile.compose`
 - `admin-vue/Dockerfile.compose`
 - `web-vue/nginx.compose.conf`
 - `admin-vue/nginx.compose.conf`
 
 > 注意：当前前后台 Compose 版 Nginx 会把 `/api` 反代到 Compose 网络中的 `backend:8080`，这是给 Docker 场景单独准备的，不影响现有 K8s 配置。
+>
+> 另外，Compose 现在还会额外启动一个 `csdn-sync-provider` 独立服务，backend 通过 `CSDN_SYNC_BASE_URL=http://csdn-sync-provider:8091` 走“远端 provider”模式，便于后续把真实 CSDN 扫码/会话逻辑从 backend 中拆出去。
 
 ### Kubernetes 资源
 

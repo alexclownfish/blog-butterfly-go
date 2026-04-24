@@ -6,8 +6,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -104,7 +108,7 @@ func NewCSDNSyncService(store CSDNSyncSessionStore, provider CSDNSyncProvider) *
 		store = NewMemoryCSDNSyncSessionStore()
 	}
 	if provider == nil {
-		provider = &StubCSDNSyncProvider{}
+		provider = defaultCSDNSyncProviderFromEnv()
 	}
 	return &CSDNSyncService{
 		store:      store,
@@ -264,6 +268,167 @@ func defaultString(value string, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func defaultCSDNSyncProviderFromEnv() CSDNSyncProvider {
+	baseURL := strings.TrimSpace(os.Getenv("CSDN_SYNC_BASE_URL"))
+	mode := strings.ToLower(strings.TrimSpace(os.Getenv("CSDN_SYNC_PROVIDER_MODE")))
+	if baseURL != "" && mode == "real" {
+		return NewRealCSDNSyncProvider(baseURL)
+	}
+	return &StubCSDNSyncProvider{}
+}
+
+type RealCSDNSyncProvider struct {
+	baseURL string
+	client  *http.Client
+}
+
+func NewRealCSDNSyncProvider(baseURL string) *RealCSDNSyncProvider {
+	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	return &RealCSDNSyncProvider{
+		baseURL: trimmed,
+		client:  &http.Client{Timeout: 15 * time.Second},
+	}
+}
+
+type realCSDNLoginStartResponse struct {
+	Provider        string `json:"provider"`
+	ProviderMode    string `json:"provider_mode"`
+	ProviderSession string `json:"provider_session"`
+	QRCodeURL       string `json:"qr_code_url"`
+	Message         string `json:"message"`
+	ErrorMessage    string `json:"error_message"`
+}
+
+type realCSDNLoginStatusResponse struct {
+	Provider        string                `json:"provider"`
+	ProviderMode    string                `json:"provider_mode"`
+	ProviderSession string                `json:"provider_session"`
+	Status          CSDNSyncSessionStatus `json:"status"`
+	Message         string                `json:"message"`
+	ErrorMessage    string                `json:"error_message"`
+	QRCodeURL       string                `json:"qr_code_url"`
+}
+
+type realCSDNArticlesResponse struct {
+	Articles []struct {
+		ID          string `json:"id"`
+		Title       string `json:"title"`
+		Summary     string `json:"summary"`
+		CoverImage  string `json:"cover_image"`
+		SourceURL   string `json:"source_url"`
+		PublishedAt string `json:"published_at"`
+	} `json:"articles"`
+}
+
+func (p *RealCSDNSyncProvider) StartLogin() (*CSDNSyncLoginStartResult, error) {
+	var resp realCSDNLoginStartResponse
+	if err := p.doJSON(http.MethodPost, "/login/start", nil, &resp); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(resp.ErrorMessage) != "" {
+		return nil, errors.New(resp.ErrorMessage)
+	}
+	return &CSDNSyncLoginStartResult{
+		Provider:        defaultString(resp.Provider, "csdn"),
+		ProviderMode:    defaultString(resp.ProviderMode, "real"),
+		ProviderSession: strings.TrimSpace(resp.ProviderSession),
+		QRCodeDataURL:   strings.TrimSpace(resp.QRCodeURL),
+		Message:         strings.TrimSpace(resp.Message),
+	}, nil
+}
+
+func (p *RealCSDNSyncProvider) GetLoginStatus(providerSession string) (*CSDNSyncSession, error) {
+	query := url.Values{}
+	query.Set("session", strings.TrimSpace(providerSession))
+	var resp realCSDNLoginStatusResponse
+	if err := p.doJSON(http.MethodGet, "/login/status", query, &resp); err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(resp.ErrorMessage) != "" {
+		return nil, errors.New(resp.ErrorMessage)
+	}
+	return &CSDNSyncSession{
+		Provider:        defaultString(resp.Provider, "csdn"),
+		ProviderMode:    defaultString(resp.ProviderMode, "real"),
+		ProviderSession: strings.TrimSpace(resp.ProviderSession),
+		Status:          resp.Status,
+		Message:         strings.TrimSpace(resp.Message),
+		ErrorMessage:    strings.TrimSpace(resp.ErrorMessage),
+		QRCodeDataURL:   strings.TrimSpace(resp.QRCodeURL),
+	}, nil
+}
+
+func (p *RealCSDNSyncProvider) ListArticles(providerSession string) ([]CSDNSyncRemoteArticle, error) {
+	query := url.Values{}
+	query.Set("session", strings.TrimSpace(providerSession))
+	var resp realCSDNArticlesResponse
+	if err := p.doJSON(http.MethodGet, "/articles", query, &resp); err != nil {
+		return nil, err
+	}
+	articles := make([]CSDNSyncRemoteArticle, 0, len(resp.Articles))
+	for _, item := range resp.Articles {
+		article := CSDNSyncRemoteArticle{
+			ID:         strings.TrimSpace(item.ID),
+			Title:      strings.TrimSpace(item.Title),
+			Summary:    strings.TrimSpace(item.Summary),
+			CoverImage: strings.TrimSpace(item.CoverImage),
+			SourceURL:  strings.TrimSpace(item.SourceURL),
+		}
+		if parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(item.PublishedAt)); err == nil {
+			article.PublishedAt = parsed
+		}
+		articles = append(articles, article)
+	}
+	return articles, nil
+}
+
+func (p *RealCSDNSyncProvider) FetchArticleContent(providerSession string, articleID string) (*CSDNArticle, error) {
+	query := url.Values{}
+	query.Set("session", strings.TrimSpace(providerSession))
+	var article CSDNArticle
+	if err := p.doJSON(http.MethodGet, "/articles/"+url.PathEscape(strings.TrimSpace(articleID)), query, &article); err != nil {
+		return nil, err
+	}
+	article.Title = strings.TrimSpace(article.Title)
+	article.Summary = strings.TrimSpace(article.Summary)
+	article.Content = strings.TrimSpace(article.Content)
+	article.CoverImage = strings.TrimSpace(article.CoverImage)
+	article.Tags = strings.TrimSpace(article.Tags)
+	article.SourceURL = strings.TrimSpace(article.SourceURL)
+	article.SourcePlatform = defaultString(strings.TrimSpace(article.SourcePlatform), "csdn")
+	return &article, nil
+}
+
+func (p *RealCSDNSyncProvider) doJSON(method string, endpoint string, query url.Values, out any) error {
+	if strings.TrimSpace(p.baseURL) == "" {
+		return errors.New("CSDN_SYNC_BASE_URL 未配置")
+	}
+	requestURL := p.baseURL + endpoint
+	if len(query) > 0 {
+		requestURL += "?" + query.Encode()
+	}
+	req, err := http.NewRequest(method, requestURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("csdn sync provider request failed: status %d", resp.StatusCode)
+	}
+	if out == nil {
+		return nil
+	}
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return err
+	}
+	return nil
 }
 
 func newCSDNSyncSessionID() (string, error) {
