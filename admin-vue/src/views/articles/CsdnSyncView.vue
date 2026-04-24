@@ -28,10 +28,19 @@
       </div>
 
       <div v-if="currentSession?.qr_code_data_url" class="qr-panel">
-        <img :src="currentSession.qr_code_data_url" alt="CSDN 登录二维码" class="qr-image" />
+        <div class="qr-image-shell">
+          <div class="qr-mode-badge">开发占位图 / 暂不可扫码</div>
+          <img :src="currentSession.qr_code_data_url" alt="CSDN 登录二维码占位图" class="qr-image" />
+          <p class="qr-image-caption">当前展示的是开发联调占位图，用来验证图片能否正常返回与显示。</p>
+        </div>
         <div class="qr-copywriting">
-          <strong>请使用 CSDN App 扫码</strong>
-          <p>扫码后点击“刷新登录状态”，授权成功就能看到可导入文章列表。</p>
+          <strong>这不是可扫码二维码，而是开发占位图</strong>
+          <p>当前阶段仅验证“后端已返回图片 + 前端已正常显示”，真实 CSDN 扫码登录能力仍待接入。</p>
+          <ul class="qr-hints">
+            <li>看到 CSDN / Stub QR / 一串标识符，说明图片已经成功渲染。</li>
+            <li>点击“刷新登录状态”可继续验证登录会话刷新链路。</li>
+            <li>待接入真实供应方后，这里才会替换成真正可扫码的二维码图案。</li>
+          </ul>
         </div>
       </div>
     </div>
@@ -248,12 +257,39 @@ onMounted(async () => {
 }
 
 .qr-panel {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  align-items: stretch;
   gap: 20px;
   padding: 20px;
-  border-radius: 20px;
-  background: rgba(15, 23, 42, 0.04);
+  border-radius: 24px;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(15, 23, 42, 0.04));
+}
+
+.qr-image-shell {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+}
+
+.qr-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .qr-image {
@@ -265,14 +301,40 @@ onMounted(async () => {
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
+.qr-image-caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-text-color-secondary);
+}
+
 .qr-copywriting {
   display: grid;
-  gap: 8px;
+  gap: 12px;
+  align-content: center;
+}
+
+.qr-copywriting strong {
+  font-size: 18px;
+  color: var(--el-text-color-primary);
 }
 
 .qr-copywriting p {
   margin: 0;
   color: var(--el-text-color-secondary);
+  line-height: 1.8;
+}
+
+.qr-hints {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 10px;
+  color: var(--el-text-color-primary);
+}
+
+.qr-hints li::marker {
+  color: #f59e0b;
 }
 
 .article-card__header {
@@ -333,8 +395,11 @@ onMounted(async () => {
 
 @media (max-width: 768px) {
   .qr-panel {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .qr-image-shell {
+    justify-items: start;
   }
 
   .qr-image {
