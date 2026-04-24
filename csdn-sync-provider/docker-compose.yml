@@ -1,0 +1,22 @@
+services:
+  csdn-sync-provider:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        IMAGE_REGISTRY_PREFIX: ${IMAGE_REGISTRY_PREFIX:-docker.m.daocloud.io/library/}
+    image: ${CSDN_SYNC_PROVIDER_IMAGE:-csdn-sync-provider:local}
+    container_name: ${CSDN_SYNC_PROVIDER_CONTAINER_NAME:-csdn-sync-provider}
+    restart: unless-stopped
+    ports:
+      - "${CSDN_SYNC_PROVIDER_PORT:-8091}:8091"
+    env_file:
+      - .env
+    environment:
+      PORT: 8091
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8091/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s

@@ -1,0 +1,18 @@
+[Unit]
+Description=CSDN Sync Provider Skeleton Service
+After=network.target
+
+[Service]
+Type=simple
+User=csdn-sync-provider
+Group=csdn-sync-provider
+WorkingDirectory=/opt/csdn-sync-provider
+EnvironmentFile=/opt/csdn-sync-provider/.env
+ExecStart=/opt/csdn-sync-provider/csdn-sync-provider
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
