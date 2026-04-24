@@ -17,6 +17,15 @@ spec:
       - name: csdn-sync-provider
         image: csdn-sync-provider:latest
         imagePullPolicy: Never
+        env:
+        - name: CSDN_PROVIDER_MODE
+          value: "real"
+        - name: CSDN_PROVIDER_NAME
+          value: "csdn"
+        - name: CSDN_PROVIDER_LOGIN_MESSAGE
+          value: "real provider bridge ready: 当前已切到独立 provider 服务"
+        - name: CSDN_PROVIDER_STATUS_MESSAGE
+          value: "waiting for real provider authorization"
         ports:
         - containerPort: 8091
 ---
