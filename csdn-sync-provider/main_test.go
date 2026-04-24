@@ -19,6 +19,7 @@ func newTestServer() *httptest.Server {
 }
 
 func TestHealthEndpoint(t *testing.T) {
+	defaultProviderService = newProviderService()
 	t.Setenv("CSDN_PROVIDER_MODE", "skeleton")
 	server := newTestServer()
 	defer server.Close()
@@ -46,6 +47,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestLoginStartUsesEnvDrivenPayload(t *testing.T) {
+	defaultProviderService = newProviderService()
 	t.Setenv("CSDN_PROVIDER_NAME", "csdn")
 	t.Setenv("CSDN_PROVIDER_MODE", "skeleton")
 	t.Setenv("CSDN_PROVIDER_SESSION_ID", "session-from-env")
@@ -84,6 +86,7 @@ func TestLoginStartUsesEnvDrivenPayload(t *testing.T) {
 }
 
 func TestLoginStatusRequiresSessionQuery(t *testing.T) {
+	defaultProviderService = newProviderService()
 	server := newTestServer()
 	defer server.Close()
 
@@ -99,6 +102,7 @@ func TestLoginStatusRequiresSessionQuery(t *testing.T) {
 }
 
 func TestArticlesAndDetailEndpointsReturnConfiguredArticle(t *testing.T) {
+	defaultProviderService = newProviderService()
 	t.Setenv("CSDN_PROVIDER_ARTICLE_ID", "article-42")
 	t.Setenv("CSDN_PROVIDER_ARTICLE_TITLE", "Provider Test Article")
 	t.Setenv("CSDN_PROVIDER_ARTICLE_SUMMARY", "summary from env")
@@ -154,7 +158,146 @@ func TestArticlesAndDetailEndpointsReturnConfiguredArticle(t *testing.T) {
 	}
 }
 
+func TestRealLoginFlowUsesRemoteQRCodeAndBecomesAuthorized(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/register/pc/wxapplets/createQrCode", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST createQrCode, got %s", r.Method)
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":  true,
+			"message": "ok",
+			"code":    "0",
+			"data": map[string]any{
+				"qrCodeUrl": "https://passport.csdn.net/qrcode/test.png",
+				"sceneId":   "scene-123",
+			},
+		})
+	})
+	mux.HandleFunc("/v1/register/pc/wxapplets/checkScan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST checkScan, got %s", r.Method)
+		}
+		var payload map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode checkScan body failed: %v", err)
+		}
+		if payload["sceneId"] != "scene-123" {
+			t.Fatalf("expected sceneId scene-123, got %+v", payload)
+		}
+		http.SetCookie(w, &http.Cookie{Name: "scan_cookie", Value: "scan-ok", Path: "/"})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":  true,
+			"message": "scanned",
+			"code":    "1077",
+			"data": map[string]any{
+				"redirectUrl": "https://passport.csdn.net/login/success",
+			},
+		})
+	})
+	mux.HandleFunc("/v1/register/pc/wxapplets/doLogin", func(w http.ResponseWriter, r *http.Request) {
+		var payload map[string]string
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode doLogin body failed: %v", err)
+		}
+		if payload["sceneId"] != "scene-123" {
+			t.Fatalf("expected sceneId scene-123, got %+v", payload)
+		}
+		http.SetCookie(w, &http.Cookie{Name: "UserName", Value: "demo-user", Path: "/"})
+		writeJSON(w, http.StatusOK, map[string]any{
+			"status":  true,
+			"message": "authorized",
+			"code":    "1077",
+			"data": map[string]any{
+				"redirectUrl": "https://blog.csdn.net/demo-user",
+			},
+		})
+	})
+	passport := httptest.NewServer(mux)
+	defer passport.Close()
+
+	defaultProviderService = newProviderService()
+	t.Setenv("CSDN_PROVIDER_MODE", "real")
+	t.Setenv("CSDN_PROVIDER_PASSPORT_BASE_URL", passport.URL)
+	server := newTestServer()
+	defer server.Close()
+
+	startReq, _ := http.NewRequest(http.MethodPost, server.URL+"/login/start", nil)
+	startResp, err := http.DefaultClient.Do(startReq)
+	if err != nil {
+		t.Fatalf("login start request failed: %v", err)
+	}
+	defer startResp.Body.Close()
+	if startResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from login start, got %d", startResp.StatusCode)
+	}
+	var startPayload loginStartResponse
+	if err := json.NewDecoder(startResp.Body).Decode(&startPayload); err != nil {
+		t.Fatalf("decode login start failed: %v", err)
+	}
+	if startPayload.ProviderSession == "" {
+		t.Fatalf("expected provider session, got %+v", startPayload)
+	}
+	if startPayload.QRCodeURL != "https://passport.csdn.net/qrcode/test.png" {
+		t.Fatalf("expected real qr url, got %+v", startPayload)
+	}
+
+	statusResp, err := http.Get(server.URL + "/login/status?session=" + startPayload.ProviderSession)
+	if err != nil {
+		t.Fatalf("login status request failed: %v", err)
+	}
+	defer statusResp.Body.Close()
+	if statusResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from login status, got %d", statusResp.StatusCode)
+	}
+	var statusPayload loginStatusResponse
+	if err := json.NewDecoder(statusResp.Body).Decode(&statusPayload); err != nil {
+		t.Fatalf("decode login status failed: %v", err)
+	}
+	if statusPayload.Status != "authorized" {
+		t.Fatalf("expected authorized, got %+v", statusPayload)
+	}
+	stored, ok := defaultProviderService.store.get(startPayload.ProviderSession)
+	if !ok {
+		t.Fatalf("expected stored session %s", startPayload.ProviderSession)
+	}
+	if stored.SceneID != "scene-123" {
+		t.Fatalf("expected stored scene id, got %+v", stored)
+	}
+	if len(stored.Cookies) == 0 {
+		t.Fatalf("expected cookies to be stored, got %+v", stored)
+	}
+}
+
+func TestRealModeArticlesRequireAuthorizedSession(t *testing.T) {
+	defaultProviderService = newProviderService()
+	defaultProviderService.store.put(&providerSessionState{ID: "pending-session", Status: "pending", CreatedAt: defaultProviderService.now(), LastSeenAt: defaultProviderService.now()})
+	t.Setenv("CSDN_PROVIDER_MODE", "real")
+	server := newTestServer()
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/articles?session=pending-session")
+	if err != nil {
+		t.Fatalf("articles request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for pending session, got %d", resp.StatusCode)
+	}
+
+	defaultProviderService.store.put(&providerSessionState{ID: "authorized-session", Status: "authorized", CreatedAt: defaultProviderService.now(), LastSeenAt: defaultProviderService.now()})
+	okResp, err := http.Get(server.URL + "/articles?session=authorized-session")
+	if err != nil {
+		t.Fatalf("authorized articles request failed: %v", err)
+	}
+	defer okResp.Body.Close()
+	if okResp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for authorized session, got %d", okResp.StatusCode)
+	}
+}
+
 func TestMethodNotAllowed(t *testing.T) {
+	defaultProviderService = newProviderService()
 	server := newTestServer()
 	defer server.Close()
 
